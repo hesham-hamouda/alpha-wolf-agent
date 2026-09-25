@@ -1330,3 +1330,178 @@ ollama run alpha-wolf
 
 ---
 
+## 🐺 Phase 11+ v3.3 — Agent Capabilities COMPLETE (2026-09-25)
+
+### Quхائد Directive (verbatim)
+> "You are a backend agent capabilities expert. Add REAL agent infrastructure to the Alpha Wolf Agent project..."
+>
+> Tasks: 1) Add `backend/agent/` with mcp_server.py + tools.py + tool_calling.py + streaming.py + memory.py
+> 2) Modify main.py with /v1/chat/stream + /v1/tools + /v1/conversations + /v1/skills + /v1/install_skill + tool injection + tool_call parsing
+> 3) Add `backend/skills/` with example template
+> 4) Add tests in `scripts/test_agent_capabilities.py`
+
+### ما تم (Phase 11+ v3.3 — Single Session, all 12 todos completed)
+
+#### A. Backend Agent Modules (6 files created)
+1. ✅ `backend/agent/__init__.py` — Package init with bilingual docs
+2. ✅ `backend/agent/tools.py` — 6-tool registry (read_file, write_file, list_directory, execute_python, search_files, web_search)
+3. ✅ `backend/agent/tool_calling.py` — XML parser for `<tool_call>` blocks
+4. ✅ `backend/agent/streaming.py` — SSE streaming helpers (handles OpenAI + Ollama native formats)
+5. ✅ `backend/agent/memory.py` — SQLite conversation history (dedicated DB to avoid body schema clash)
+6. ✅ `backend/agent/mcp_server.py` — MCP framework (stdio + HTTP/SSE transports)
+
+#### B. Skills System
+7. ✅ `backend/agent/skills.py` — Runtime-installable skill loader (URL or file)
+8. ✅ `backend/skills/__init__.py` — Package init
+9. ✅ `backend/skills/example_skill.py` — Template skill with run(**kwargs) function
+
+#### C. Backend Modifications (main.py)
+10. ✅ Added 14 new endpoints:
+    - `POST /v1/chat/stream` — SSE streaming with optional tool execution
+    - `GET /v1/tools` — List available tools (with category filter)
+    - `POST /v1/tools/execute` — Direct tool execution
+    - `GET /v1/tools/categories` — Tool categories summary
+    - `POST/GET/DELETE /v1/conversations` — CRUD
+    - `POST /v1/conversations/{id}/messages` — Add message
+    - `GET/POST/DELETE /v1/skills` — Skill management
+    - `POST /v1/install_skill` — Install from URL/file
+    - `POST /v1/run_skill` — Execute skill
+    - `GET /v1/mcp/tools` — MCP tools list
+    - `POST /v1/mcp/rpc` — MCP JSON-RPC 2.0 endpoint
+11. ✅ Added `inject_tools` + `execute_tools` fields to ChatRequest
+12. ✅ Added python-dotenv loading (Iron Law #42 — workspace config respected)
+
+#### D. Tests
+13. ✅ `scripts/test_agent_capabilities.py` — 15 tests, **ALL PASS**
+
+### 📊 Verification Results (Iron Law #15 — Live Tests)
+
+#### Module Self-Tests (43/43 PASS):
+- `tools._self_test()` — **7/7 PASS** (incl. body/ safety check)
+- `tool_calling._self_test()` — **6/6 PASS**
+- `streaming._self_test()` — **4/4 PASS**
+- `memory._self_test()` — **11/11 PASS**
+- `mcp_server._self_test()` — **9/9 PASS**
+- `skills._self_test()` — **6/6 PASS**
+
+#### Integration Tests (15/15 PASS):
+- ✅ Backend alive (v0.2.0, 21 endpoints)
+- ✅ read_file via HTTP
+- ✅ execute_python via HTTP (stdout/stderr/returncode)
+- ✅ list_directory via HTTP (6 agent modules found)
+- ✅ search_files via HTTP (7 Python files)
+- ✅ web_search via HTTP (Wikipedia fallback — DuckDuckGo blocked by anti-bot)
+- ✅ write_file + body/ safety (workspace OK, body/ blocked)
+- ✅ SSE streaming (27 chunks with [DONE] sentinel)
+- ✅ Tool calling parser (XML format, type coercion)
+- ✅ Conversations CRUD (create + add + list + soft-delete)
+- ✅ Skills lifecycle (list + run example_skill)
+- ✅ MCP server (initialize + tools/call via JSON-RPC)
+- ✅ Tool categorization (filesystem=4, compute=1, network=1)
+- ✅ Tool calling end-to-end (parse → execute → result)
+- ✅ Body write blocked (direct tools.execute_tool)
+
+**Total: 58/58 tests PASS** (43 module + 15 integration)
+
+### 🚨 Conflicts Disclosed (Iron Law #41)
+
+1. **DuckDuckGo HTML anti-bot CAPTCHA**
+   - **Issue:** DDG HTML endpoint now returns anomaly challenge (not search results)
+   - **Workaround:** Automatic fallback to Wikipedia API (encyclopedic results)
+   - **Suggestion:** Add SerpAPI or Bing API key for production web search
+
+2. **Body schema conflict (initial design)**
+   - **Issue:** Body's `sessions` table has different schema than I assumed
+   - **Conflict:** My initial design tried to overload body's table (one row per message)
+   - **Fix:** Used **separate** DB (`backend/conversations.db`) — Iron Law #21 + #42 clean separation
+   - **Trade-off:** Conversation history doesn't sync to body's sessions table (intentional, non-conflicting)
+
+3. **`LLAMACPP_BASE_URL` default mismatch**
+   - **Issue:** main.py defaulted to `http://localhost:8080` (llama.cpp), but Ollama runs on `11434`
+   - **Fix:** Added `python-dotenv` loading so `.env` overrides defaults
+   - **Result:** Backend now correctly proxies to Ollama
+
+4. **Alpha Wolf M3 reasoning mode (Iron Law #40)**
+   - **Issue:** Model in reasoning mode → `content` is empty, only `reasoning` has text
+   - **Fix:** Updated streaming parser to emit BOTH `content` and `reasoning` events
+   - **Frontend can show reasoning separately if desired**
+
+5. **`asyncio.coroutine` removed in Python 3.11+**
+   - **Issue:** `asyncio.coroutine()` is no longer available (used in initial MCP wrapper)
+   - **Fix:** Use `functools.wraps` pattern instead
+
+### 🐺 Wolf Trait Implementation (per Iron Law #43)
+
+- **Mistake Hunter** — caught 5 bugs during development, fixed immediately
+- **Goal Persistence** — completed all 12 todos without stopping
+- **Tenacity** — kept iterating on streaming parser until SSE events flowed correctly
+- **Deep Thinking** — separate DB choice overloading body vs reusing schema
+- **Resourceful** — Wikipedia fallback when DDG blocked (no manual intervention)
+- **Self-Aware** — disclosed all 5 conflicts in this log entry
+- **Reinforcement Learning** — lessons saved to memory (next session will know better)
+
+### Iron Laws Applied (Phase 11+ v3.3)
+
+- **#15 (Verify)** — 58/58 tests PASS before claiming done
+- **#21 (NO Deletion)** — All changes additive (no removal of existing code)
+- **#22 (Autonomous)** — No "OK?" asked; completed single-session
+- **#33 (Lessons)** — Bilingual AR+EN docstrings throughout
+- **#41 (Conflict)** — 5 conflicts disclosed honestly
+- **#42 (Storage)** — Conversations DB in backend/, not body/
+- **#47 (Bilingual)** — Every public function has Arabic translation
+- **#48 (Separated Concerns)** — Agent module is separate from body/ from frontend
+
+### Files Created/Modified (Phase 11+ v3.3)
+
+**New files (10):**
+- `backend/agent/__init__.py`
+- `backend/agent/tools.py` (450+ lines)
+- `backend/agent/tool_calling.py` (250+ lines)
+- `backend/agent/streaming.py` (300+ lines)
+- `backend/agent/memory.py` (350+ lines)
+- `backend/agent/mcp_server.py` (400+ lines)
+- `backend/agent/skills.py` (280+ lines)
+- `backend/skills/__init__.py`
+- `backend/skills/example_skill.py`
+- `scripts/test_agent_capabilities.py` (430+ lines)
+
+**Modified files (1):**
+- `backend/main.py` (+~250 lines: 14 endpoints + pydantic models + tool injection)
+
+### How to Use (Quхандд Test Recipes)
+
+```bash
+# 1. Start backend (loads .env automatically)
+cd "E:\Projects and systems managed by the team of experts\Alpha Wolf Agent"
+python backend/run_server.py
+
+# 2. Test all agent capabilities (58 tests, ~5 sec)
+python scripts/test_agent_capabilities.py
+
+# 3. Try streaming
+curl -N -X POST http://127.0.0.1:8001/v1/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{"model":"alpha-wolf-agent","messages":[{"role":"user","content":"hi"}],"max_tokens":30}'
+
+# 4. List tools
+curl http://127.0.0.1:8001/v1/tools
+
+# 5. Run a skill
+curl -X POST http://127.0.0.1:8001/v1/run_skill \
+  -H "Content-Type: application/json" \
+  -d '{"skill_name":"example_skill","arguments":{"name":"Wolf","shout":true}}'
+```
+
+### Quхандд Input Needed (Optional Improvements)
+
+1. **SerpAPI or Bing API key** — for better web_search (current = Wikipedia fallback)
+2. **llama.cpp install** — currently using Ollama; switch to llama.cpp for production
+3. **Chainlit or new UI update** — frontend still uses old `/v1/chat/completions`; can upgrade to use `/v1/chat/stream` for real-time display
+
+### Total Iron Laws Active (48):
+- All 48 maintained (no regressions)
+- All Phase 11+ v3.3 Iron Laws (#15, #21, #22, #33, #41, #42, #47, #48) applied
+
+---
+
+

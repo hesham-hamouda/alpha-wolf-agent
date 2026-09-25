@@ -1,0 +1,111 @@
+{
+  "frontend_url": "http://127.0.0.1:8501",
+  "backend_url": "http://127.0.0.1:8001",
+  "backend": {
+    "status": "online",
+    "data": {
+      "name": "Alpha Wolf Agent Backend",
+      "version": "0.3.0",
+      "phase": "11+ v3.4 (Agent Capabilities + GraphRAG + Code Sandbox + Live RAG)",
+      "endpoints": [
+        "/v1/chat/completions",
+        "/v1/chat/stream",
+        "/v1/recall",
+        "/v1/memory/episode",
+        "/v1/memory/goal",
+        "/v1/memory/mistake",
+        "/v1/memory/reflection",
+        "/v1/tools",
+        "/v1/tools/execute",
+        "/v1/tools/categories",
+        "/v1/conversations",
+        "/v1/skills",
+        "/v1/install_skill",
+        "/v1/run_skill",
+        "/v1/mcp/tools",
+        "/v1/mcp/rpc",
+        "/v1/graph/entity",
+        "/v1/graph/relation",
+        "/v1/body/health",
+        "/v1/body/backup",
+        "/v1/self/summary",
+        "/v1/live-context/summary",
+        "/v1/live-context/search",
+        "/v1/live-context/inject",
+        "/v1/code-exec/execute",
+        "/v1/code-exec/safety-check",
+        "/v1/rag/query",
+        "/v1/rag/index",
+        "/v1/rag/stats"
+      ],
+      "docs": "/docs"
+    }
+  },
+  "frontend": {
+    "status": "online",
+    "code": 200,
+    "size": 1522
+  },
+  "results": [
+    {
+      "name": "home",
+      "url": "http://127.0.0.1:8501",
+      "load_time": "6.34s",
+      "has_arabic": true,
+      "has_wolf_emoji": true,
+      "has_content": true,
+      "screenshot": "E:\\Projects and systems managed by the team of experts\\Alpha Wolf Agent\\frontend\\screenshots\\home.png",
+      "errors_during_load": [],
+      "status": "PASS"
+    },
+    {
+      "name": "body_health",
+      "url": "http://127.0.0.1:8501",
+      "load_time": "6.07s",
+      "has_arabic": true,
+      "has_wolf_emoji": true,
+      "has_content": true,
+      "screenshot": "E:\\Projects and systems managed by the team of experts\\Alpha Wolf Agent\\frontend\\screenshots\\body_health.png",
+      "errors_during_load": [],
+      "status": "PASS"
+    },
+    {
+      "name": "memory_inspector",
+      "url": "http://127.0.0.1:8501",
+      "load_time": "6.08s",
+      "has_arabic": true,
+      "has_wolf_emoji": true,
+      "has_content": true,
+      "screenshot": "E:\\Projects and systems managed by the team of experts\\Alpha Wolf Agent\\frontend\\screenshots\\memory_inspector.png",
+      "errors_during_load": [],
+      "status": "PASS"
+    },
+    {
+      "name": "tools_registry",
+      "url": "http://127.0.0.1:8501",
+      "load_time": "6.06s",
+      "has_arabic": true,
+      "has_wolf_emoji": true,
+      "has_content": true,
+      "screenshot": "E:\\Projects and systems managed by the team of experts\\Alpha Wolf Agent\\frontend\\screenshots\\tools_registry.png",
+      "errors_during_load": [],
+      "status": "PASS"
+    },
+    {
+      "name": "project_awareness",
+      "url": "http://127.0.0.1:8501",
+      "load_time": "6.05s",
+      "has_arabic": true,
+      "has_wolf_emoji": true,
+      "has_content": true,
+      "screenshot": "E:\\Projects and systems managed by the team of experts\\Alpha Wolf Agent\\frontend\\screenshots\\project_awareness.png",
+      "errors_during_load": [],
+      "status": "PASS"
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0
+  }
+}

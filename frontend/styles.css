@@ -1,0 +1,478 @@
+/* ============================================================================
+   Alpha Wolf Agent — Custom CSS
+   ============================================================================
+   Modern, ChatGPT-like UI for Streamlit.
+   - Centered chat with max-width 800px
+   - Message bubbles (user right, assistant left)
+   - Code syntax highlighting
+   - Wolf-themed accents
+   - Bilingual support (Arabic + English)
+
+   Iron Laws Applied:
+   - #47 Bilingual: RTL-safe styles for Arabic
+   - #33 Lessons: hover tooltips via title attributes
+   ============================================================================ */
+
+/* ---- Root variables ---- */
+:root {
+    --wolf-primary: #7c3aed;       /* purple */
+    --wolf-primary-dark: #5b21b6;
+    --wolf-accent: #f59e0b;         /* amber */
+    --wolf-bg: #ffffff;
+    --wolf-bg-secondary: #f9fafb;
+    --wolf-bg-tertiary: #f3f4f6;
+    --wolf-text: #111827;
+    --wolf-text-muted: #6b7280;
+    --wolf-border: #e5e7eb;
+    --wolf-border-dark: #d1d5db;
+    --wolf-success: #10b981;
+    --wolf-danger: #ef4444;
+    --wolf-user-bubble: #7c3aed;
+    --wolf-assistant-bubble: #f3f4f6;
+    --wolf-code-bg: #1e1e1e;
+    --wolf-code-text: #e5e7eb;
+    --wolf-sidebar-bg: #fafafa;
+    --wolf-max-width: 800px;
+}
+
+/* ---- Streamlit container overrides ---- */
+/* Hide Streamlit branding & main menu */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header[data-testid="stHeader"] {
+    background: transparent;
+}
+
+/* Hide "Press Enter to apply" hint on text inputs */
+[data-testid="InputInstructions"] {display: none !important;}
+
+/* ---- Sidebar styling ---- */
+section[data-testid="stSidebar"] {
+    background-color: var(--wolf-sidebar-bg);
+    border-right: 1px solid var(--wolf-border);
+}
+
+section[data-testid="stSidebar"] .stButton > button {
+    width: 100%;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {
+    color: var(--wolf-primary-dark);
+}
+
+/* ---- Main container ---- */
+.main .block-container {
+    max-width: var(--wolf-max-width);
+    padding-top: 2rem;
+    padding-bottom: 120px;  /* leave room for fixed chat input */
+}
+
+/* ---- Chat messages ---- */
+.wolf-chat-container {
+    max-width: var(--wolf-max-width);
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.wolf-message {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    border-radius: 14px;
+    animation: fadeIn 0.3s ease;
+}
+
+.wolf-message-user {
+    background: linear-gradient(135deg, var(--wolf-user-bubble) 0%, var(--wolf-primary-dark) 100%);
+    color: white;
+    margin-left: 15%;
+}
+
+.wolf-message-assistant {
+    background: var(--wolf-assistant-bubble);
+    color: var(--wolf-text);
+    margin-right: 15%;
+    border: 1px solid var(--wolf-border);
+}
+
+.wolf-message-avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.wolf-message-content {
+    flex: 1;
+    min-width: 0;
+    word-wrap: break-word;
+}
+
+.wolf-message-content p:first-child {
+    margin-top: 0;
+}
+
+.wolf-message-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* ---- Code blocks ---- */
+.wolf-code-block {
+    background: var(--wolf-code-bg);
+    color: var(--wolf-code-text);
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0.75rem 0;
+    border: 1px solid #374151;
+}
+
+.wolf-code-block-header {
+    background: #2d2d2d;
+    color: #d4d4d4;
+    padding: 0.4rem 1rem;
+    border-radius: 8px 8px 0 0;
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid #374151;
+    border-bottom: none;
+    margin: 0.75rem 0 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ---- Tool call display ---- */
+.wolf-tool-call {
+    background: #fef3c7;
+    border-left: 4px solid var(--wolf-accent);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin: 0.75rem 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+}
+
+.wolf-tool-call-header {
+    font-weight: 600;
+    color: #92400e;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wolf-tool-call-input {
+    color: #78350f;
+    margin-top: 0.5rem;
+    white-space: pre-wrap;
+}
+
+.wolf-tool-result {
+    background: #ecfdf5;
+    border-left: 4px solid var(--wolf-success);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin: 0.5rem 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: #064e3b;
+}
+
+.wolf-tool-result-error {
+    background: #fef2f2;
+    border-left-color: var(--wolf-danger);
+    color: #991b1b;
+}
+
+/* ---- Top bar (custom header) ---- */
+.wolf-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.25rem;
+    background: white;
+    border-bottom: 1px solid var(--wolf-border);
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    backdrop-filter: blur(8px);
+}
+
+.wolf-topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--wolf-primary-dark);
+}
+
+.wolf-topbar-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--wolf-text-muted);
+}
+
+.wolf-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.wolf-status-dot-online { background: var(--wolf-success); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
+.wolf-status-dot-offline { background: var(--wolf-danger); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+
+/* ---- Wolf trait indicators ---- */
+.wolf-traits-bar {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.wolf-trait-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--wolf-primary), var(--wolf-primary-dark));
+    color: white;
+    font-size: 16px;
+    cursor: help;
+    transition: transform 0.15s;
+}
+
+.wolf-trait-chip:hover {
+    transform: scale(1.15);
+}
+
+.wolf-trait-chip-inactive {
+    background: var(--wolf-bg-tertiary);
+    color: var(--wolf-text-muted);
+}
+
+/* ---- Conversation list ---- */
+.wolf-conv-item {
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.wolf-conv-item:hover {
+    background: var(--wolf-bg-tertiary);
+}
+
+.wolf-conv-item-active {
+    background: var(--wolf-primary);
+    color: white;
+}
+
+.wolf-conv-item-active:hover {
+    background: var(--wolf-primary-dark);
+}
+
+.wolf-conv-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+}
+
+.wolf-conv-delete {
+    opacity: 0.5;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+}
+
+.wolf-conv-item:hover .wolf-conv-delete {
+    opacity: 1;
+}
+
+/* ---- Metric cards ---- */
+.wolf-metric-card {
+    background: white;
+    padding: 1.25rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--wolf-border);
+    text-align: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.wolf-metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.wolf-metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--wolf-primary-dark);
+    line-height: 1.1;
+}
+
+.wolf-metric-label {
+    font-size: 0.85rem;
+    color: var(--wolf-text-muted);
+    margin-top: 0.25rem;
+}
+
+/* ---- Chat input (fixed bottom) ---- */
+.wolf-chat-input-wrapper {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to bottom, transparent, var(--wolf-bg) 30%);
+    padding: 1rem;
+    z-index: 100;
+}
+
+.wolf-chat-input-inner {
+    max-width: var(--wolf-max-width);
+    margin: 0 auto;
+}
+
+/* ---- Streamlit chat input override (force multi-line) ---- */
+[data-testid="stChatInput"] textarea {
+    border-radius: 18px !important;
+    border: 1px solid var(--wolf-border) !important;
+    padding: 0.75rem 1rem !important;
+}
+
+[data-testid="stChatInput"] textarea:focus {
+    border-color: var(--wolf-primary) !important;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important;
+}
+
+/* ---- Expander (collapsible cards) ---- */
+.streamlit-expanderHeader {
+    background: var(--wolf-bg-secondary);
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+/* ---- Banners / alerts ---- */
+.wolf-banner {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin: 0.75rem 0;
+    border-left: 4px solid;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.wolf-banner-info { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
+.wolf-banner-success { background: #f0fdf4; border-color: #22c55e; color: #166534; }
+.wolf-banner-warning { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+.wolf-banner-danger { background: #fef2f2; border-color: #ef4444; color: #991b1b; }
+
+/* ---- Animations ---- */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.wolf-thinking-pulse {
+    display: inline-block;
+    animation: pulse 1.4s ease-in-out infinite;
+}
+
+/* ---- RTL support for Arabic ---- */
+.wolf-rtl {
+    direction: rtl;
+    text-align: right;
+}
+
+.wolf-bilingual-label {
+    display: inline-block;
+}
+
+/* ---- Empty state ---- */
+.wolf-empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--wolf-text-muted);
+}
+
+.wolf-empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.wolf-empty-state-text {
+    font-size: 1.1rem;
+}
+
+/* ---- Tool button styling ---- */
+.wolf-tool-btn {
+    background: var(--wolf-bg-secondary);
+    border: 1px solid var(--wolf-border);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.wolf-tool-btn:hover {
+    background: var(--wolf-bg-tertiary);
+    border-color: var(--wolf-border-dark);
+}
+
+/* ---- Header gradient banner ---- */
+.wolf-header-gradient {
+    background: linear-gradient(135deg, var(--wolf-primary) 0%, var(--wolf-primary-dark) 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.wolf-header-gradient h1 {
+    margin: 0;
+    color: white;
+    font-size: 1.75rem;
+}
+
+.wolf-header-gradient p {
+    margin: 0.5rem 0 0 0;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.95rem;
+}
+
+/* ---- Spinner override ---- */
+.stSpinner > div {
+    border-color: var(--wolf-primary) !important;
+}
