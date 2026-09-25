@@ -1,0 +1,131 @@
+{
+  "node_types": {
+    "Concept": {
+      "required": [
+        "name"
+      ],
+      "optional": [
+        "domain",
+        "description"
+      ]
+    },
+    "Tool": {
+      "required": [
+        "name",
+        "invocation"
+      ],
+      "optional": [
+        "version",
+        "description"
+      ]
+    },
+    "Person": {
+      "required": [
+        "name"
+      ],
+      "optional": [
+        "role",
+        "email"
+      ]
+    },
+    "Place": {
+      "required": [
+        "name"
+      ],
+      "optional": [
+        "kind"
+      ]
+    },
+    "Dataset": {
+      "required": [
+        "name",
+        "source"
+      ],
+      "optional": [
+        "size",
+        "license",
+        "path"
+      ]
+    },
+    "Mistake": {
+      "required": [
+        "context",
+        "lesson"
+      ],
+      "optional": [
+        "severity"
+      ]
+    },
+    "Goal": {
+      "required": [
+        "title",
+        "status"
+      ],
+      "optional": [
+        "priority",
+        "deadline"
+      ]
+    },
+    "Reflection": {
+      "required": [
+        "trigger",
+        "insight"
+      ],
+      "optional": [
+        "confidence"
+      ]
+    },
+    "Episode": {
+      "required": [
+        "summary"
+      ],
+      "optional": [
+        "importance"
+      ]
+    },
+    "KB": {
+      "required": [
+        "name"
+      ],
+      "optional": [
+        "domain"
+      ]
+    }
+  },
+  "edge_types": {
+    "trains_on": [
+      "Goal",
+      "Dataset"
+    ],
+    "depends_on": null,
+    "contradicts": [
+      "Claim",
+      "Claim"
+    ],
+    "supports": [
+      "Evidence",
+      "Claim"
+    ],
+    "replaces": null,
+    "similar_to": null,
+    "knows_about": null,
+    "learned_from": [
+      "Mistake",
+      "Episode"
+    ],
+    "applies_to": [
+      "Tool",
+      "Goal"
+    ],
+    "blocks": [
+      "Mistake",
+      "Goal"
+    ],
+    "achieves": [
+      "Episode",
+      "Goal"
+    ]
+  },
+  "schema_version": "alpha-wolf-v1",
+  "generated_at": "2026-09-25T01:01:24.594901+00:00"
+}

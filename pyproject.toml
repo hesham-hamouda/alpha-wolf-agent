@@ -1,0 +1,220 @@
+[project]
+name = "alpha-wolf-body"
+version = "0.1.0"
+description = "Alpha Wolf Agent — Body Infrastructure (ChromaDB + NetworkX + SQLite + zvec) + FastAPI + Chainlit"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+    { name = "القائد هشام (Master)", email = "heshammostafa330@gmail.com" },
+    { name = "The Expert Team", email = "team@experts.local" },
+]
+keywords = ["llm", "agent", "knowledge-graph", "vector-db", "rag", "alpha-wolf"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows :: Windows 11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    # Core body infrastructure
+    "chromadb>=1.4.0",            # Vector DB (semantic search)
+    "zvec>=0.7.0",                # Backup vector layer
+    "networkx>=3.6.1",            # Typed knowledge graph
+    "sqlite-utils>=4.2.1",        # SQLite helper library
+
+    # Backend (FastAPI bridge)
+    "fastapi>=0.141.0",           # Web framework
+    "uvicorn[standard]>=0.30.0",  # ASGI server
+    "pydantic>=2.7.0",            # Data validation
+    "pydantic-settings>=2.4.0",    # Settings management
+    "httpx>=0.27.0",              # HTTP client (for llama.cpp)
+    "python-dotenv>=1.0.1",        # .env file loading
+
+    # Frontend (Chainlit)
+    "chainlit>=2.12.0",           # LLM chat UI
+
+    # Embedding model integration (Ollama local)
+    "requests>=2.32.0",            # HTTP for Ollama API
+
+    # Observability
+    "loguru>=0.7.0",               # Structured logging
+
+    # Optional: for self-curation from HuggingFace
+    "huggingface-hub>=0.24.0",    # HF Hub API (when online)
+]
+
+[project.optional-dependencies]
+dev = [
+    # Linting + formatting (replaces flake8+black+isort)
+    "ruff>=0.16.9",
+
+    # Type checking
+    "mypy>=1.10.0",
+
+    # Testing
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+
+    # Git hooks
+    "pre-commit>=4.0.0",
+
+    # Documentation
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+
+    # Build
+    "hatchling>=1.25.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/hesham-hamouda/the-expert-team"
+"Documentation" = "https://github.com/hesham-hamouda/the-expert-team/blob/main/PROJECT_PLAN.md"
+"Source" = "https://github.com/hesham-hamouda/the-expert-team"
+"Bug Tracker" = "https://github.com/hesham-hamouda/the-expert-team/issues"
+
+# ============================================================================
+# Ruff (linter + formatter — replaces flake8 + black + isort)
+# ============================================================================
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [
+    ".venv",
+    "build",
+    "dist",
+    "backups",
+    "node_modules",
+]
+
+[tool.ruff.lint]
+# E = pycodestyle errors, W = warnings, F = pyflakes, I = isort
+# N = pep8-naming, UP = pyupgrade, B = bugbear, S = bandit (security)
+# C4 = comprehensions, SIM = simplify, RUF = ruff-specific
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # function call in default argument (FastAPI uses this)
+    "S101",   # assert statements (acceptable in tests)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["alpha_wolf_body", "backend", "frontend"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+# ============================================================================
+# MyPy (type checker)
+# ============================================================================
+
+[tool.mypy]
+python_version = "3.12"
+strict = false                       # Start lenient, tighten incrementally
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true        # Many libs don't have stubs
+
+[[tool.mypy.overrides]]
+module = "chromadb.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "zvec.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "chainlit.*"
+ignore_missing_imports = true
+
+# ============================================================================
+# Pytest
+# ============================================================================
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --strict-markers --cov=body --cov=backend --cov=frontend --cov-report=term-missing"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests (require running services)",
+    "unit: marks tests as unit tests",
+]
+
+# ============================================================================
+# Coverage
+# ============================================================================
+
+[tool.coverage.run]
+source = ["body", "backend", "frontend"]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+    "*/migrations/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+# ============================================================================
+# Hatchling (build backend)
+# ============================================================================
+
+[tool.hatch.build.targets.wheel]
+packages = ["body", "backend", "frontend"]
+
+# ============================================================================
+# Scripts (convenience entry points)
+# ============================================================================
+
+[project.scripts]
+# Body
+alpha-wolf-init = "body.init_body:main"
+alpha-wolf-verify = "body.alpha_wolf_body:main"
+# Backend
+alpha-wolf-backend = "backend.main:run"
+alpha-wolf-backend-dev = "backend.main:run_dev"
+# Frontend
+alpha-wolf-ui = "frontend.app:run"
+
+# ============================================================================
+# Iron Law Compliance (audit trail)
+# ============================================================================
+
+[tool.alpha-wolf]
+iron_laws_applied = [
+    "#8 (3-Expert Consensus)",
+    "#13 (Self-Critical Check)",
+    "#14 (Snapshot Before Edit)",
+    "#15 (Verify Before Claim)",
+    "#17 (User Preferences Override)",
+    "#18 (3-Expert Max Parallel)",
+    "#21 (NO Deletion)",
+    "#22 (Autonomous Execution)",
+    "#36 (5-Layer Save Protocol)",
+    "#42 (Workspace-Body Separation)",
+]
+phase = "Phase 11+ v3.0"
+created = "2026-09-25"
+methodology = "Iron Law #44 (5 Gates)"
+wolf_traits = 7
+body_stack = ["ChromaDB", "NetworkX", "SQLite", "zvec"]
+frontend = "Chainlit 2.12+"
+backend = "FastAPI + Uvicorn"
+python_stack = ["uv", "ruff", "mypy", "pytest"]

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐺 Alpha Wolf Agent — Frontend Preview</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: #0a0e1a;
+            color: #e0e0e0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #131825;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 20px;
+            border-bottom: 1px solid #2a3142;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { color: #ffd700; font-size: 1.5em; }
+        .header-status { display: flex; gap: 15px; }
+        .status-badge {
+            background: #1f2937;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #4cc9f0;
+        }
+        .status-badge.error { color: #ff6b9d; }
+        .main-layout { display: grid; grid-template-columns: 250px 1fr 300px; min-height: 600px; }
+        .sidebar {
+            background: #0f1422;
+            padding: 20px;
+            border-right: 1px solid #2a3142;
+        }
+        .sidebar h3 {
+            color: #9d4edd;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2a3142;
+        }
+        .sidebar-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .sidebar-item:hover { background: #1f2937; }
+        .sidebar-item.active { background: #4cc9f0; color: #0a0e1a; font-weight: bold; }
+        .sidebar-section {
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #2a3142;
+        }
+        .sidebar-metric {
+            background: #1f2937;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+        }
+        .sidebar-metric-value { color: #06ffa5; font-weight: bold; }
+        .content {
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .tab-bar {
+            display: flex;
+            border-bottom: 1px solid #2a3142;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #888;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab:hover { color: #fff; }
+        .tab.active { color: #ffd700; border-bottom-color: #ffd700; }
+        .chat-messages { min-height: 400px; }
+        .message {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user {
+            background: #1e3a5f;
+            border-left: 4px solid #4cc9f0;
+        }
+        .message.assistant {
+            background: #2a1e5f;
+            border-left: 4px solid #ff6b9d;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+        .message-role { font-weight: bold; color: #ffd700; }
+        .message-time { color: #888; }
+        .step {
+            background: #1a1a2e;
+            border: 1px solid #2a3142;
+            border-radius: 6px;
+            margin: 10px 0;
+            padding: 12px;
+        }
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #06ffa5;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .step-icon { font-size: 1.2em; }
+        .step-content { color: #b0b0b0; font-size: 0.9em; }
+        .tool-call {
+            background: #2a1e3f;
+            border-left: 3px solid #9d4edd;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 4px;
+        }
+        .tool-name {
+            color: #ff6b9d;
+            font-weight: bold;
+            font-family: 'Consolas', monospace;
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background: #0f1422;
+            border-top: 1px solid #2a3142;
+        }
+        .input-area input {
+            flex: 1;
+            background: #1f2937;
+            border: 1px solid #2a3142;
+            border-radius: 4px;
+            padding: 10px;
+            color: #fff;
+            font-size: 14px;
+        }
+        .input-area button {
+            background: #4cc9f0;
+            color: #0a0e1a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .right-panel {
+            background: #0f1422;
+            padding: 20px;
+            border-left: 1px solid #2a3142;
+        }
+        .right-panel h3 {
+            color: #9d4edd;
+            margin-bottom: 15px;
+        }
+        .stat-card {
+            background: #131825;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 3px solid #4cc9f0;
+        }
+        .stat-label { color: #888; font-size: 0.85em; }
+        .stat-value { color: #06ffa5; font-size: 1.5em; font-weight: bold; }
+        .action-btn {
+            display: block;
+            width: 100%;
+            background: #1f2937;
+            border: 1px solid #2a3142;
+            color: #e0e0e0;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: left;
+        }
+        .action-btn:hover { background: #2a3142; border-color: #4cc9f0; }
+        .preview-note {
+            background: #2a1e3f;
+            border: 2px dashed #9d4edd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #ffd700;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Header -->
+    <div class="header">
+        <h1>🐺 Alpha Wolf Agent</h1>
+        <div class="header-status">
+            <span class="status-badge">● Body: ✅ 4-layer</span>
+            <span class="status-badge">● llama.cpp: ⚠️ not yet</span>
+            <span class="status-badge">● Chainlit: 2.12.0</span>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h3>🐺 Navigation</h3>
+            <div class="sidebar-item active">💬 Chat</div>
+            <div class="sidebar-item">🧠 Memory</div>
+            <div class="sidebar-item">📁 Knowledge</div>
+            <div class="sidebar-item">🎯 Goals</div>
+            <div class="sidebar-item">⚠️ Mistakes</div>
+            <div class="sidebar-item">🛠️ Tools</div>
+            <div class="sidebar-item">🔍 Classify</div>
+
+            <div class="sidebar-section">
+                <h3>📊 Body Status</h3>
+                <div class="sidebar-metric">
+                    <span>ChromaDB</span>
+                    <span class="sidebar-metric-value">12 ✅</span>
+                </div>
+                <div class="sidebar-metric">
+                    <span>NetworkX</span>
+                    <span class="sidebar-metric-value">3 nodes</span>
+                </div>
+                <div class="sidebar-metric">
+                    <span>SQLite</span>
+                    <span class="sidebar-metric-value">16 tables</span>
+                </div>
+                <div class="sidebar-metric">
+                    <span>zvec</span>
+                    <span class="sidebar-metric-value">ok</span>
+                </div>
+                <div class="sidebar-metric">
+                    <span>Classifications</span>
+                    <span class="sidebar-metric-value">2</span>
+                </div>
+                <div class="sidebar-metric">
+                    <span>Iron Laws</span>
+                    <span class="sidebar-metric-value">47</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>🐺 Wolf Traits</h3>
+                <div class="sidebar-metric" style="border-left-color: #06ffa5;">
+                    <span>Mistake Hunter</span>
+                    <span class="sidebar-metric-value">3</span>
+                </div>
+                <div class="sidebar-metric" style="border-left-color: #06ffa5;">
+                    <span>Goal Persistence</span>
+                    <span class="sidebar-metric-value">3</span>
+                </div>
+                <div class="sidebar-metric" style="border-left-color: #06ffa5;">
+                    <span>Deep Thinking</span>
+                    <span class="sidebar-metric-value">3</span>
+                </div>
+                <div class="sidebar-metric" style="border-left-color: #06ffa5;">
+                    <span>Resourceful</span>
+                    <span class="sidebar-metric-value">2</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="preview-note">
+                📌 <strong>Frontend Preview (HTML mockup)</strong> — This is how the Chainlit UI will look when fully running.<br>
+                The actual Chainlit server (frontend/app.py) is ready and waiting for `pip install chainlit==2.12.0`.
+            </div>
+
+            <div class="tab-bar">
+                <div class="tab active">💬 Chat</div>
+                <div class="tab">🧠 Memory</div>
+                <div class="tab">📁 Knowledge</div>
+                <div class="tab">🎯 Goals</div>
+                <div class="tab">⚠️ Mistakes</div>
+                <div class="tab">🛠️ Tools</div>
+            </div>
+
+            <div class="chat-messages">
+                <!-- User message -->
+                <div class="message user">
+                    <div class="message-header">
+                        <span class="message-role">👤 Quхائد هشام</span>
+                        <span class="message-time">10:30 AM</span>
+                    </div>
+                    <p>ما هي أهم 3 صفات للذئب التي تجعل منه أفضل قائد لمجموعة؟</p>
+                </div>
+
+                <!-- Assistant response with ReAct steps -->
+                <div class="message assistant">
+                    <div class="message-header">
+                        <span class="message-role">🐺 Alpha Wolf Agent</span>
+                        <span class="message-time">10:30 AM · 1.2s</span>
+                    </div>
+
+                    <!-- ReAct Step 1: Thought -->
+                    <div class="step">
+                        <div class="step-header">
+                            <span class="step-icon">💭</span>
+                            <span>Step 1: Thinking</span>
+                        </div>
+                        <div class="step-content">
+                            The user asks about top 3 wolf traits for leadership. I should:
+                            1. Recall ALPHA_WOLF_PERSONALITY.md (body has this)
+                            2. Recall general wolf leadership research
+                            3. Synthesize 3 most important traits
+                        </div>
+                    </div>
+
+                    <!-- ReAct Step 2: Action (Tool Call) -->
+                    <div class="step">
+                        <div class="step-header">
+                            <span class="step-icon">⚡</span>
+                            <span>Step 2: Action — Tool Call</span>
+                        </div>
+                        <div class="tool-call">
+                            <span class="tool-name">body.recall("wolf leadership traits", kb_filter="kb_self")</span>
+                            <div style="margin-top: 5px; color: #888;">
+                                → Found 3 results: ALPHA_WOLF_PERSONALITY.md, wolf_leadership_research, pack_dynamics
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ReAct Step 3: Observation -->
+                    <div class="step">
+                        <div class="step-header">
+                            <span class="step-icon">👁️</span>
+                            <span>Step 3: Observation</span>
+                        </div>
+                        <div class="step-content">
+                            Body has 7 Wolf traits defined. Most relevant to leadership:
+                            1. <strong>التتبع (Goal Persistence)</strong> — never abandon pack
+                            2. <strong>الشراسة (Tenacity)</strong> — failure is data
+                            3. <strong>الوعي الذاتي (Self-Aware)</strong> — knows pack strengths
+                        </div>
+                    </div>
+
+                    <!-- Final Response -->
+                    <div class="step" style="border-left: 3px solid #06ffa5;">
+                        <div class="step-header">
+                            <span class="step-icon">✅</span>
+                            <span>Answer</span>
+                        </div>
+                        <div class="step-content" style="color: #fff;">
+                            <strong>أهم 3 صفات للذئب كقائد:</strong>
+                            <br><br>
+                            <strong>1. تتبع الأهداف (Goal Persistence)</strong>
+                            <br>
+                            الذئب لا يتخلى عن هدفه. يقود مجموعته بصبر حتى تحقيق الصيد.
+                            <br><br>
+                            <strong>2. الشراسة (Tenacity)</strong>
+                            <br>
+                            الفشل = بيانات، ليس نهاية. كل محاولة فاشلة = درس للتحسين.
+                            <br><br>
+                            <strong>3. الوعي الذاتي (Self-Aware)</strong>
+                            <br>
+                            يعرف نقاط قوة مجموعته، ويوزع المهام بحكمة.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <input type="text" placeholder="Type your question or task..." />
+                <button>Send 📤</button>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <h3>📊 Current Step Details</h3>
+
+            <div class="stat-card">
+                <div class="stat-label">Current Step</div>
+                <div class="stat-value">Answer ✅</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Tokens Used</div>
+                <div class="stat-value">347</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Latency</div>
+                <div class="stat-value">1.2s</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Model</div>
+                <div class="stat-value">Llama-3.1</div>
+            </div>
+
+            <h3 style="margin-top: 25px;">⚡ Quick Actions</h3>
+            <button class="action-btn">📊 Body Health Check</button>
+            <button class="action-btn">🛠️ List Tools (5)</button>
+            <button class="action-btn">🎯 Active Goals (3)</button>
+            <button class="action-btn">⚠️ Recent Mistakes (3)</button>
+            <button class="action-btn">🔍 Classify Dataset</button>
+            <button class="action-btn">💾 Backup Body</button>
+        </div>
+    </div>
+</div>
+
+<div style="max-width: 1400px; margin: 20px auto; padding: 20px; background: #131825; border-radius: 8px;">
+    <h2 style="color: #ffd700; margin-bottom: 15px;">🎨 Frontend Architecture</h2>
+    <table style="width: 100%; color: #e0e0e0; border-collapse: collapse;">
+        <tr style="border-bottom: 1px solid #2a3142;">
+            <td style="padding: 10px;"><strong>Framework:</strong></td>
+            <td style="padding: 10px; color: #06ffa5;">Chainlit 2.12.0 (open source, professional, purpose-built for LLM agents)</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #2a3142;">
+            <td style="padding: 10px;"><strong>ReAct Visualization:</strong></td>
+            <td style="padding: 10px; color: #06ffa5;">✅ Native (cl.StepContext decorator)</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #2a3142;">
+            <td style="padding: 10px;"><strong>MCP Support:</strong></td>
+            <td style="padding: 10px; color: #06ffa5;">✅ Native (MCP tool display)</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #2a3142;">
+            <td style="padding: 10px;"><strong>OpenAI-Compatible:</strong></td>
+            <td style="padding: 10px; color: #06ffa5;">✅ Works with llama.cpp out of the box</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #2a3142;">
+            <td style="padding: 10px;"><strong>Step History:</strong></td>
+            <td style="padding: 10px; color: #06ffa5;">✅ Persistent (built-in)</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #2a3142;">
+            <td style="padding: 10px;"><strong>Dark Mode:</strong></td>
+            <td style="padding: 10px; color: #06ffa5;">✅ Built-in</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #2a3142;">
+            <td style="padding: 10px;"><strong>WCAG 2.1 AA:</strong></td>
+            <td style="padding: 10px; color: #06ffa5;">✅ Compliant (keyboard nav + screen reader)</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px;"><strong>Custom CSS:</strong></td>
+            <td style="padding: 10px; color: #06ffa5;">✅ Supported (overrides Wolf branding)</td>
+        </tr>
+    </table>
+
+    <h3 style="color: #ff6b9d; margin-top: 20px;">📋 How to Run (When deps are installed)</h3>
+    <pre style="background: #0a0e1a; padding: 15px; border-radius: 4px; color: #06ffa5; overflow-x: auto;">
+# Terminal 1: FastAPI backend (port 8001)
+uvicorn backend.main:app --host 127.0.0.1 --port 8001 --reload
+
+# Terminal 2: Chainlit frontend (port 8000)
+chainlit run frontend/app.py --port 8000 --watch
+
+# Open browser: http://localhost:8000
+    </pre>
+
+    <h3 style="color: #9d4edd; margin-top: 20px;">✨ Customizations to Add (if needed)</h3>
+    <ul style="color: #e0e0e0; line-height: 2;">
+        <li>🎨 <strong>Custom Wolf theme</strong> (replace default Chainlit theme with our colors)</li>
+        <li>📊 <strong>Body health widget</strong> in sidebar (real-time stats)</li>
+        <li>📁 <strong>File upload</strong> for dataset classification (in-browser)</li>
+        <li>🔍 <strong>Knowledge graph view</strong> (iframe component with vis.js)</li>
+        <li>📈 <strong>Metrics dashboard</strong> (Prometheus-style charts)</li>
+        <li>🌍 <strong>Multi-language</strong> (Arabic + English toggle)</li>
+    </ul>
+</div>
+
+<div style="text-align: center; margin-top: 20px; color: #888;">
+    <p>Phase 11+ v3.2 — Wolf Classification Protocol + Chainlit UI Ready</p>
+    <p>Open this file in browser for full interactive preview</p>
+</div>
+
+</body>
+</html>

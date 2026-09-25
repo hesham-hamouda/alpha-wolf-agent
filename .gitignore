@@ -1,0 +1,142 @@
+# ============================================
+# Alpha Wolf Agent — .gitignore
+# ============================================
+# Generated: 2026-09-25
+# Purpose: Exclude large/binary/sensitive files from version control
+# Convention: Python + ML + HuggingFace + Docker
+
+# ----------------------------------------
+# Python (بايثون)
+# ----------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+.venv/
+env/
+.env
+.env.local
+.env.*.local
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+.tox/
+
+# ----------------------------------------
+# ML Models (نماذج التعلم الآلي)
+# ----------------------------------------
+# Large binary files — exclude from git
+*.safetensors
+*.gguf
+*.bin
+*.pt
+*.pth
+*.onnx
+*.h5
+*.hdf5
+*.pkl
+*.joblib
+*.npy
+*.npz
+checkpoints/
+adapters/*.safetensors
+unsloth_compiled_cache/
+
+# ----------------------------------------
+# Training Data (بيانات التدريب)
+# ----------------------------------------
+data/
+datasets/
+raw/
+augmented_data/
+backups/
+*.jsonl
+!docs/**/*.jsonl  # Allow small examples in docs
+!scripts/**/*.jsonl  # Allow example scripts
+
+# ----------------------------------------
+# Logs (السجلات)
+# ----------------------------------------
+*.log
+*.log.*
+logs/
+last_run_*.log
+eval_*.log
+training_*.log
+v*_training.log
+v*_eval.log
+inspect*.log
+download*.log
+smoke_*.log
+
+# ----------------------------------------
+# IDE / Editor (بيئات التطوير)
+# ----------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ----------------------------------------
+# OS (نظام التشغيل)
+# ----------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ----------------------------------------
+# HuggingFace Cache (كاش هاجينج فيس)
+# ----------------------------------------
+hub/
+hf_cache/
+~/.cache/huggingface/
+*.parquet
+*.arrow
+
+# ----------------------------------------
+# Docker (دوكر)
+# ----------------------------------------
+.docker/
+docker-compose.override.yml
+docker-compose.override.yaml
+*.dockerfile.local
+
+# ----------------------------------------
+# Streamlit / Chainlit / Web UI
+# ----------------------------------------
+.streamlit/secrets.toml
+.chainlit/
+.streamlit/
+
+# ----------------------------------------
+# Model Artifacts (مخرجات النموذج)
+# ----------------------------------------
+models/*/pytorch_model*
+models/*/model.safetensors
+models/*/tokenizer.json
+models/*/generation_config.json
+
+# ----------------------------------------
+# Project-Specific Excludes
+# ----------------------------------------
+# Local config that should not be committed
+local.env
+secrets/
+*.key
+*.pem
+
+# Temporary backups
+*.tmp
+*.bak
+*~
