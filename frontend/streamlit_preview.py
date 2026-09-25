@@ -32,6 +32,38 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# DARK THEME — Quхائد preference (لا أبيض / not white)
+st.markdown("""
+<style>
+    /* Force DARK theme — Quхائد explicitly: "بحبش الابيض" (don't like white) */
+    .stApp { background-color: #0a0e1a !important; color: #e0e0e0 !important; }
+    [data-testid="stSidebar"] {
+        background-color: #131825 !important;
+        color: #e0e0e0 !important;
+        border-right: 2px solid #ffd700 !important;
+    }
+    [data-testid="stSidebar"] * { color: #e0e0e0 !important; }
+    section[data-testid="stSidebar"] > div { background-color: #131825 !important; }
+    .stRadio label, .stMarkdown, .stText, .stMetric, .stDataFrame { color: #e0e0e0 !important; }
+    .stButton > button {
+        background-color: #1f2937 !important; color: #e0e0e0 !important;
+        border: 1px solid #4cc9f0 !important;
+    }
+    .stButton > button:hover { background-color: #2a3142 !important; }
+    .stChatMessage { background-color: #1a1a2e !important; }
+    .stCode, code, pre { background-color: #0f1422 !important; color: #06ffa5 !important; }
+    h1, h2, h3 { color: #ffd700 !important; }
+    .wolf-header {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        padding: 20px;
+        border-radius: 10px;
+        color: #ffd700;
+        margin-bottom: 20px;
+        border: 2px solid #ffd700;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Bilingual labels
 T = {
     # Header
