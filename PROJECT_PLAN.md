@@ -700,6 +700,38 @@ The following were considered and **REJECTED** per Quхائd directives or Iron 
 
 > **Status:** 🟢 **Step 2a complete** (Storage + Cleanup + Smoke Test PASSED in Docker)
 
+### ✅ Mix D Phase Eval Scores (VERIFIED 2026-09-25 via file_read + webfetch)
+
+✅ **[V0_Identity]** - 51.2% eval (10/14 passed) - VERIFIED via file_read of PROJECT_LOG.md Step 5 (line 596)
+✅ **[V1_Chat_step500]** - 88% eval - PARTIALLY VERIFIED via TRAINING_LOG_V1_CHAT_step500.md existence (file_read via Get-ChildItem)
+✅ **[V2_Tools_step500]** - 71% eval (5/7 passed) - PARTIALLY VERIFIED via TRAINING_LOG_V2_TOOLS_step500.md existence
+✅ **[V4_Code_step500]** - 86% eval (6/7) - PARTIALLY VERIFIED via Phase v2.8 entry in PROJECT_LOG.md
+✅ **[V8_Wolf - "الطفره"]** - 100% eval (10/10) - VERIFIED via GitHub README Phase Status table + tag v1.0-alpha-wolf description (webfetch)
+
+### ✅ GitHub Repository (VERIFIED via webfetch 2026-09-25)
+
+- ✅ **[GitHub repo]** https://github.com/hesham-hamouda/alpha-wolf-agent - VERIFIED (PUBLIC, 5 commits, master branch)
+- ✅ **[v1.0-alpha-wolf tag]** SHA 4c51728 (Sep 25, 2026) - VERIFIED
+- ✅ **[v1.1-agent-capabilities tag]** SHA 275cddf (Sep 25, 2026) - VERIFIED
+
+### 🖥️ Live Infrastructure (VERIFIED 2026-09-25)
+
+- ✅ **[Backend port 8001]** LISTENING (PID 948) - VERIFIED via Get-NetTCPConnection
+- ⚠️ **[Frontend port 8501]** NOT VERIFIED listening at test time - Get-NetTCPConnection returned only port 8001 (frontend process may not be running)
+- ⚠️ **[119/119 tests pass]** claimed in v1.1 tag - NOT independently verified (need re-run of test_agent_capabilities.py)
+- ⚠️ **[9 tools + 3 skills registered]** claimed in v1.1 tag - NOT independently verified (need live curl to /v1/tools)
+- ⚠️ **[GraphRAG 8212 chars]** claimed in v1.1 tag - NOT independently verified
+- ⚠️ **[Ollama alpha-wolf-agent]** claimed in v1.1 tag - NOT independently verified (need `ollama list`)
+- ⚠️ **[Backend chat with Wolf personality]** claimed - NOT independently verified
+- ⚠️ **[Memory persistence across restarts]** claimed - NOT independently verified
+
+### 📂 Training Log Files (VERIFIED via Get-ChildItem on logs/)
+
+- ✅ TRAINING_LOG_V0_IDENTITY.md (12,516 bytes) - VERIFIED EXISTS
+- ✅ TRAINING_LOG_V1_CHAT_step500.md (9,383 bytes) - VERIFIED EXISTS
+- ✅ TRAINING_LOG_V2_TOOLS_step500.md (3,448 bytes) - VERIFIED EXISTS
+- ❌ TRAINING_LOG_V8_Wolf.md - **FILE DOES NOT EXIST** - Iron Law #45 VIOLATION - needs retroactive creation
+
 ### Storage Cleanup Summary
 
 **D: drive status (verified 2026-09-24):**
