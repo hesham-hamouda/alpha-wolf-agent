@@ -28,7 +28,7 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -58,21 +58,19 @@ T = {
     "app_name": "Alpha Wolf Agent",
     "app_subtitle": "وكيل الذئب ألفا",
     "wolf_emoji": "🐺",
-    "app_tagline": "AI Agent with Wolf Traits",
-    "app_tagline_ar": "وكيل ذكاء اصطناعي بصفات الذئب",
-
-    # Navigation
-    "nav_chat": "Chat | محادثة",
-    "nav_health": "Body Health | صحة الجسم",
-    "nav_memory": "Memory Inspector | مفتش الذاكرة",
-    "nav_tools": "Tools Registry | سجل الأدوات",
-    "nav_project": "Project Awareness | وعي المشروع",
-    "nav_settings": "Settings | الإعدادات",
+    "app_tagline": "Your wolf-themed AI assistant with 7 traits",
+    "app_tagline_ar": "مساعدك الذكي بصفات الذئب السبع",
+    "footer_disclaimer": "Alpha Wolf Agent can make mistakes. Verify important info. | قد يخطئ الذئب. تحقق من المعلومات المهمة.",
 
     # Sidebar
-    "new_chat": "New Chat | محادثة جديدة",
+    "new_chat": "New chat | محادثة جديدة",
     "conversations": "Conversations | المحادثات",
+    "search_chats": "Search chats... | ابحث في المحادثات...",
+    "today": "Today | اليوم",
+    "yesterday": "Yesterday | أمس",
+    "previous_7_days": "Previous 7 days | الأيام السبعة السابقة",
     "delete_chat": "Delete | حذف",
+    "delete_confirm": "Delete this chat? | حذف هذه المحادثة؟",
     "no_conversations": "No conversations yet | لا محادثات بعد",
     "wolf_traits": "Wolf Traits | صفات الذئب",
     "trait_active": "Active | نشط",
@@ -80,51 +78,86 @@ T = {
     "backend_connected": "Connected | متصل",
     "backend_offline": "Offline | غير متصل",
     "model_label": "Model | النموذج",
+    "user_name": "Quханд هشام | القائد",
+    "settings_link": "Settings | الإعدادات",
+
+    # Top bar
+    "clear_chat": "Clear chat | مسح المحادثة",
+    "clear_confirm": "Clear this conversation? | مسح هذه المحادثة؟",
+    "theme_toggle": "Theme | المظهر",
+    "theme_dark": "Dark | داكن",
+    "theme_light": "Light | فاتح",
+    "temperature_label": "Temperature | الحرارة",
 
     # Chat
-    "chat_placeholder": "Ask Alpha Wolf anything... | اسأل الذئب أي شيء...",
+    "chat_placeholder": "Message Alpha Wolf... (Enter to send, Shift+Enter for new line) | اكتب للذئب... (Enter للإرسال، Shift+Enter لسطر جديد)",
     "send": "Send | إرسال",
-    "send_tooltip": "Press Enter to send (Shift+Enter for new line) | اضغط Enter للإرسال",
     "stop_generating": "Stop | إيقاف",
-    "thinking": "Thinking... | يفكر...",
+    "thinking": "Alpha Wolf is thinking | الذئب يفكر",
+    "thinking_with_dots": "Alpha Wolf is thinking...",
     "tool_calling": "Tool Call | استدعاء أداة",
+    "tool_result": "Result | النتيجة",
+    "tool_duration": "Duration | المدة",
+    "tool_arguments": "Arguments | المعاملات",
+    "tool_output": "Output | المخرجات",
     "upload_file": "Upload File | رفع ملف",
     "upload_tooltip": "Attach a file to your message | إرفق ملف مع رسالتك",
     "copy_response": "Copy | نسخ",
     "regenerate": "Regenerate | إعادة التوليد",
-    "clear_chat": "Clear Chat | مسح المحادثة",
     "export_chat": "Export | تصدير",
-    "tool_execution": "Tool Execution | تنفيذ الأداة",
-    "tool_duration": "Duration | المدة",
+    "export_json": "Export as JSON | تصدير JSON",
+    "export_markdown": "Export as Markdown | تصدير Markdown",
 
-    # Body Health
-    "body_status": "Body Status | حالة الجسم",
+    # Quick start cards (welcome screen)
+    "qs_mistake_hunter_title": "Mistake Hunter | اقتناص الأخطاء",
+    "qs_mistake_hunter_desc": "Help me debug code | ساعدني في تصحيح كود",
+    "qs_deep_thinking_title": "Deep Thinking | التفكير العميق",
+    "qs_deep_thinking_desc": "Analyze a complex problem | حلل مشكلة معقدة",
+    "qs_resourceful_title": "Resourceful | استخدام الموارد",
+    "qs_resourceful_desc": "Find tools to solve this | جد أدوات لحل هذا",
+    "qs_tenacity_title": "Tenacity | الشراسة",
+    "qs_tenacity_desc": "Don't give up on me | لا تستسلم",
+
+    # Errors
+    "error": "Error | خطأ",
+    "error_backend_offline": "Backend is offline. Start it with: | الخادم متوقف. شغّله بـ:",
+    "retry": "Retry | إعادة المحاولة",
+    "cancel": "Cancel | إلغاء",
+    "save": "Save | حفظ",
+    "delete": "Delete | حذف",
+    "edit": "Edit | تعديل",
+    "close": "Close | إغلاق",
+    "yes": "Yes | نعم",
+    "no": "No | لا",
+    "open": "Open | فتح",
+
+    # Wolf traits (7 traits)
+    "trait_mistake_hunter": "Mistake Hunter | اقتناص الأخطاء",
+    "trait_goal_persistence": "Goal Persistence | تتبع الأهداف",
+    "trait_tenacity": "Tenacity | الشراسة",
+    "trait_deep_thinking": "Deep Thinking | التفكير العميق",
+    "trait_resourceful": "Resourceful | استخدام الموارد",
+    "trait_self_aware": "Self-Aware | الوعي الذاتي",
+    "trait_reinforcement_learning": "Reinforcement Learning | التعلم التعزيزي",
+
+    # Settings
+    "settings_general": "General | عام",
+    "settings_appearance": "Appearance | المظهر",
+    "settings_model": "Model | النموذج",
+    "settings_advanced": "Advanced | متقدم",
+
+    # Welcome metrics
     "chromadb_collections": "ChromaDB Collections | مجموعات ChromaDB",
     "networkx_nodes": "NetworkX Nodes | عقد NetworkX",
     "networkx_edges": "NetworkX Edges | روابط NetworkX",
     "sqlite_tables": "SQLite Tables | جداول SQLite",
-    "sqlite_size": "SQLite Size | حجم SQLite",
-    "zvec_status": "zvec Status | حالة zvec",
-    "disk_usage": "Disk Usage | استخدام القرص",
-    "integrity": "Integrity | السلامة",
-    "wolf_self_summary": "Wolf Self-Summary | ملخص الذئب الذاتي",
-    "training_mix": "Training Mix | خليط التدريب",
-    "refresh": "Refresh | تحديث",
-    "create_backup": "Create Backup | إنشاء نسخة احتياطية",
-    "backup_created": "Backup created | تم إنشاء النسخة",
 
-    # Memory Inspector
+    # Memory views
     "memory_episodes": "Episodes | الحلقات",
     "memory_goals": "Goals | الأهداف",
     "memory_mistakes": "Mistakes | الأخطاء",
     "memory_reflections": "Reflections | التأملات",
-    "filter_date": "Date Range | نطاق التاريخ",
-    "filter_source": "Source | المصدر",
-    "filter_tags": "Tags | الوسوم",
-    "add_to_memory": "Add to Memory | إضافة للذاكرة",
-    "episode_content": "Content | المحتوى",
-    "episode_importance": "Importance | الأهمية",
-    "active_goals": "🎯 Active Goals | الأهداف النشطة",
+    "active_goals": "Active Goals | الأهداف النشطة",
     "open_goals": "Open Goals | الأهداف المفتوحة",
     "recent_mistakes": "Recent Mistakes + Lessons | الأخطاء والدروس",
     "recent_reflections": "Recent Reflections | التأملات الحديثة",
@@ -161,28 +194,8 @@ T = {
 
     # Common
     "loading": "Loading... | جاري التحميل...",
-    "error": "Error | خطأ",
-    "retry": "Retry | إعادة المحاولة",
-    "cancel": "Cancel | إلغاء",
-    "save": "Save | حفظ",
-    "delete": "Delete | حذف",
-    "edit": "Edit | تعديل",
-    "close": "Close | إغلاق",
-    "yes": "Yes | نعم",
-    "no": "No | لا",
-    "open": "Open | فتح",
-    "details": "Details | التفاصيل",
     "metadata": "Metadata | البيانات الوصفية",
     "timestamp": "Timestamp | الوقت",
-
-    # Wolf traits
-    "trait_mistake_hunter": "Mistake Hunter | اقتناص الأخطاء",
-    "trait_goal_persistence": "Goal Persistence | تتبع الأهداف",
-    "trait_tenacity": "Tenacity | الشراسة",
-    "trait_deep_thinking": "Deep Thinking | التفكير العميق",
-    "trait_resourceful": "Resourceful | استخدام الموارد",
-    "trait_self_aware": "Self-Aware | الوعي الذاتي",
-    "trait_reinforcement_learning": "Reinforcement Learning | التعلم التعزيزي",
 }
 
 # Default wolf trait active state (visual indicators)
@@ -326,6 +339,17 @@ class APIClient:
             logger.warning("add_message failed: %s", exc)
             return None
 
+    def get_messages(self, conversation_id: str, limit: int = 100) -> list[dict[str, Any]]:
+        """Get all messages in a conversation.
+
+        Note: Backend does NOT expose GET for messages (only POST/Add).
+        We retrieve the full conversation object which includes messages.
+        """
+        conv = self.get_conversation(conversation_id)
+        if not conv:
+            return []
+        return conv.get("messages", [])[:limit]
+
     # ----- Chat (non-streaming) -----
     def chat(self, messages: list[dict[str, str]], **kwargs) -> dict[str, Any] | None:
         """Non-streaming chat completion."""
@@ -453,7 +477,6 @@ class APIClient:
             )
             resp.raise_for_status()
             data = resp.json()
-            # Backend returns raw list; tolerate wrapped format too
             if isinstance(data, list):
                 return data
             return data.get("episodes", [])
@@ -585,6 +608,52 @@ def truncate(text: str, max_len: int = 100) -> str:
     return text[: max_len - 3] + "..."
 
 
+def get_date_bucket(iso_date: str | None) -> str:
+    """Bucket an ISO date string into 'today', 'yesterday', 'previous_7_days'.
+
+    Per Iron Law #33 — clear section labels.
+    """
+    if not iso_date:
+        return "previous_7_days"
+
+    try:
+        dt = datetime.fromisoformat(str(iso_date).replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc) if dt.tzinfo else datetime.now()
+
+        # Convert now to dt's timezone if dt has tzinfo
+        if dt.tzinfo:
+            now = now.astimezone(dt.tzinfo)
+
+        diff_days = (now.date() - dt.date()).days
+
+        if diff_days <= 0:
+            return "today"
+        elif diff_days == 1:
+            return "yesterday"
+        else:
+            return "previous_7_days"
+    except (ValueError, TypeError):
+        return "previous_7_days"
+
+
+def group_conversations_by_date(conversations: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Group conversations into today/yesterday/previous_7_days buckets.
+
+    Per Iron Law #48 (Separated): pure data function, no UI logic.
+    """
+    groups: dict[str, list[dict[str, Any]]] = {
+        "today": [],
+        "yesterday": [],
+        "previous_7_days": [],
+    }
+    for conv in conversations:
+        # Use last_activity or created_at
+        date_field = conv.get("last_activity") or conv.get("created_at")
+        bucket = get_date_bucket(date_field)
+        groups[bucket].append(conv)
+    return groups
+
+
 def detect_code_blocks(text: str) -> list[dict[str, str]]:
     """Detect fenced code blocks in markdown text.
 
@@ -623,6 +692,57 @@ def split_text_by_code(text: str) -> list[dict[str, str]]:
     if last_end < len(text):
         segments.append({"type": "text", "content": text[last_end:]})
     return segments
+
+
+def auto_generate_title(first_message: str, max_len: int = 50) -> str:
+    """Generate a short title from the first user message.
+
+    Per Iron Law #33 — auto-title from first message for clean sidebar.
+    """
+    if not first_message:
+        return T["new_chat"]
+
+    # Strip extra whitespace
+    msg = re.sub(r"\s+", " ", first_message).strip()
+    if not msg:
+        return T["new_chat"]
+
+    # If short enough, use as-is
+    if len(msg) <= max_len:
+        return msg
+
+    # Truncate at word boundary
+    truncated = msg[:max_len]
+    last_space = truncated.rfind(" ")
+    if last_space > max_len * 0.6:  # at least 60% used
+        truncated = truncated[:last_space]
+    return truncated + "..."
+
+
+def export_chat_as_markdown(messages: list[dict[str, Any]], title: str = "Chat") -> str:
+    """Export conversation as Markdown text."""
+    lines = [f"# {title}", ""]
+    for msg in messages:
+        role = msg.get("role", "user").capitalize()
+        content = msg.get("content", "")
+        ts = msg.get("ts") or msg.get("created_at", "")
+        if ts:
+            lines.append(f"_{ts}_")
+        lines.append(f"## {role}")
+        lines.append("")
+        lines.append(content)
+        lines.append("")
+    return "\n".join(lines)
+
+
+def export_chat_as_json(messages: list[dict[str, Any]], metadata: dict | None = None) -> str:
+    """Export conversation as JSON string."""
+    data = {
+        "metadata": metadata or {},
+        "messages": messages,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return json.dumps(data, ensure_ascii=False, indent=2)
 
 
 # ============================================================================

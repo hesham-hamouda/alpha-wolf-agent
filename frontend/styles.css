@@ -1,243 +1,908 @@
 /* ============================================================================
-   Alpha Wolf Agent — Custom CSS
+   Alpha Wolf Agent — ChatGPT Desktop Style (Dark Theme)
    ============================================================================
-   Modern, ChatGPT-like UI for Streamlit.
-   - Centered chat with max-width 800px
-   - Message bubbles (user right, assistant left)
-   - Code syntax highlighting
-   - Wolf-themed accents
-   - Bilingual support (Arabic + English)
+   Modern, ChatGPT-desktop-style web UI for the Alpha Wolf Agent.
+   Color palette inspired by ChatGPT dark theme + Wolf Gold accents.
 
    Iron Laws Applied:
-   - #47 Bilingual: RTL-safe styles for Arabic
-   - #33 Lessons: hover tooltips via title attributes
+   - #47 (Bilingual): RTL-safe styles for Arabic
+   - #33 (Lessons → Code): Hover tooltips via title attributes
+   - #41 (Conflict Disclosure): Backend offline fallback visible in UI
+   - #48 (Separated): Each component section has its own CSS block
+
    ============================================================================ */
 
-/* ---- Root variables ---- */
+/* ========================================================================
+   ROOT VARIABLES — ChatGPT-style dark theme + Wolf Gold
+   ======================================================================== */
+
 :root {
-    --wolf-primary: #7c3aed;       /* purple */
-    --wolf-primary-dark: #5b21b6;
-    --wolf-accent: #f59e0b;         /* amber */
-    --wolf-bg: #ffffff;
-    --wolf-bg-secondary: #f9fafb;
-    --wolf-bg-tertiary: #f3f4f6;
-    --wolf-text: #111827;
-    --wolf-text-muted: #6b7280;
-    --wolf-border: #e5e7eb;
-    --wolf-border-dark: #d1d5db;
-    --wolf-success: #10b981;
-    --wolf-danger: #ef4444;
-    --wolf-user-bubble: #7c3aed;
-    --wolf-assistant-bubble: #f3f4f6;
-    --wolf-code-bg: #1e1e1e;
-    --wolf-code-text: #e5e7eb;
-    --wolf-sidebar-bg: #fafafa;
-    --wolf-max-width: 800px;
+    /* ChatGPT-style dark backgrounds */
+    --bg-page: #212121;              /* Main page background */
+    --bg-sidebar: #171717;           /* Sidebar darker */
+    --bg-surface: #2F2F2F;           /* User message bubble */
+    --bg-surface-hover: #353535;     /* Hover state */
+    --bg-input: #2A2A2A;             /* Input fields */
+
+    /* Text */
+    --text-primary: #ECECEC;         /* Primary text */
+    --text-secondary: #B4B4B4;       /* Muted text */
+    --text-tertiary: #8E8E8E;        /* Very muted */
+    --text-on-accent: #1A1A1A;       /* Text on gold accent */
+
+    /* Wolf Gold accent */
+    --accent-gold: #FFD700;          /* Primary accent (wolf gold) */
+    --accent-gold-dim: #B8A04A;      /* Muted gold */
+    --accent-gold-glow: rgba(255, 215, 0, 0.15);
+
+    /* Borders */
+    --border-subtle: #2E2E2E;
+    --border-strong: #3E3E3E;
+    --border-accent: rgba(255, 215, 0, 0.3);
+
+    /* Status */
+    --success: #10A37F;              /* ChatGPT green */
+    --danger: #EF4444;
+    --warning: #F59E0B;
+    --info: #3B82F6;
+
+    /* Code */
+    --code-bg: #1A1A1A;
+    --code-text: #ECECEC;
+    --code-comment: #6A9955;
+
+    /* Spacing & Layout */
+    --sidebar-width: 260px;
+    --max-chat-width: 768px;
+    --header-height: 56px;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-pill: 9999px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
-/* ---- Streamlit container overrides ---- */
-/* Hide Streamlit branding & main menu */
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header[data-testid="stHeader"] {
-    background: transparent;
+/* ========================================================================
+   STREAMLIT OVERRIDES — Hide branding, force dark theme
+   ======================================================================== */
+
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+header[data-testid="stHeader"] { background: transparent !important; }
+[data-testid="InputInstructions"] { display: none !important; }
+[data-testid="stToolbar"] { display: none !important; }
+[data-testid="stDecoration"] { display: none !important; }
+.viewerBadge_link__qRIco { display: none !important; }
+
+/* Main app container */
+.stApp {
+    background-color: var(--bg-page) !important;
+    color: var(--text-primary) !important;
+    font-family: "Söhne", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif !important;
 }
 
-/* Hide "Press Enter to apply" hint on text inputs */
-[data-testid="InputInstructions"] {display: none !important;}
+/* Block container — centered with max-width */
+.main .block-container {
+    max-width: var(--max-chat-width);
+    padding-top: calc(var(--header-height) + 24px);
+    padding-bottom: 140px;  /* leave room for fixed chat input */
+    padding-left: 24px;
+    padding-right: 24px;
+}
 
-/* ---- Sidebar styling ---- */
+/* ========================================================================
+   SIDEBAR — Collapsible left panel (ChatGPT-style)
+   ======================================================================== */
+
 section[data-testid="stSidebar"] {
-    background-color: var(--wolf-sidebar-bg);
-    border-right: 1px solid var(--wolf-border);
+    background-color: var(--bg-sidebar) !important;
+    color: var(--text-primary) !important;
+    border-right: 1px solid var(--border-subtle);
+    min-width: var(--sidebar-width) !important;
+    max-width: var(--sidebar-width) !important;
 }
 
-section[data-testid="stSidebar"] .stButton > button {
-    width: 100%;
-    border-radius: 8px;
-    font-weight: 500;
+section[data-testid="stSidebar"] > div {
+    background-color: var(--bg-sidebar) !important;
+    padding-top: 8px !important;
+}
+
+section[data-testid="stSidebar"] * {
+    color: var(--text-primary) !important;
+}
+
+section[data-testid="stSidebar"] hr {
+    border-color: var(--border-subtle) !important;
+    margin: 12px 0 !important;
 }
 
 section[data-testid="stSidebar"] h1,
 section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] h3 {
-    color: var(--wolf-primary-dark);
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] h4 {
+    color: var(--text-primary) !important;
+    font-weight: 600;
+    padding: 0;
+    margin: 12px 0 6px 0;
 }
 
-/* ---- Main container ---- */
-.main .block-container {
-    max-width: var(--wolf-max-width);
-    padding-top: 2rem;
-    padding-bottom: 120px;  /* leave room for fixed chat input */
+section[data-testid="stSidebar"] .stMarkdown,
+section[data-testid="stSidebar"] .stCaption,
+section[data-testid="stSidebar"] .stText {
+    color: var(--text-secondary) !important;
 }
 
-/* ---- Chat messages ---- */
+/* New Chat button (primary) */
+section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 10px 16px !important;
+    font-weight: 500 !important;
+    transition: all 0.15s ease !important;
+    width: 100%;
+    text-align: left;
+}
+
+section[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
+    background-color: var(--bg-surface-hover) !important;
+    border-color: var(--accent-gold) !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button[kind="primary"]::before {
+    content: "✚  ";
+    color: var(--accent-gold);
+    font-weight: bold;
+}
+
+/* Sidebar conversation list */
+section[data-testid="stSidebar"] .stButton > button[kind="secondary"] {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+    border: none !important;
+    padding: 8px 12px !important;
+    border-radius: var(--radius-sm) !important;
+    font-weight: 400 !important;
+    text-align: left !important;
+    transition: background 0.15s ease !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover {
+    background-color: var(--bg-surface-hover) !important;
+}
+
+/* Active conversation */
+.wolf-conv-active button {
+    background-color: var(--bg-surface) !important;
+}
+
+/* Sidebar search input */
+section[data-testid="stSidebar"] .stTextInput input {
+    background-color: var(--bg-input) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 8px 12px !important;
+}
+
+section[data-testid="stSidebar"] .stTextInput input:focus {
+    border-color: var(--accent-gold) !important;
+    box-shadow: 0 0 0 2px var(--accent-gold-glow) !important;
+}
+
+/* Sidebar bottom user/footer */
+.wolf-sidebar-footer {
+    border-top: 1px solid var(--border-subtle);
+    padding: 12px 0;
+    margin-top: 16px;
+}
+
+.wolf-sidebar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.wolf-sidebar-user:hover {
+    background-color: var(--bg-surface-hover);
+}
+
+.wolf-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(135deg, var(--accent-gold), #FFA500);
+    color: var(--text-on-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.wolf-user-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* ========================================================================
+   TOP BAR — Model selector + settings
+   ======================================================================== */
+
+.wolf-topbar {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-width);
+    right: 0;
+    height: var(--header-height);
+    background-color: var(--bg-page);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 999;
+    backdrop-filter: blur(8px);
+    background-color: rgba(33, 33, 33, 0.92);
+}
+
+.wolf-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.wolf-topbar-model {
+    background-color: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 6px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.wolf-topbar-model:hover {
+    background-color: var(--bg-surface);
+    border-color: var(--border-strong);
+}
+
+.wolf-topbar-model-icon {
+    color: var(--accent-gold);
+}
+
+.wolf-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wolf-topbar-icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wolf-topbar-icon-btn:hover {
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+}
+
+.wolf-topbar-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+}
+
+.wolf-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    display: inline-block;
+}
+
+.wolf-status-dot-online {
+    background: var(--success);
+    box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.15);
+}
+
+.wolf-status-dot-offline {
+    background: var(--danger);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+/* ========================================================================
+   WELCOME SCREEN — Centered hero with quick start cards
+   ======================================================================== */
+
+.wolf-welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px 80px;
+    text-align: center;
+}
+
+.wolf-welcome-logo {
+    font-size: 56px;
+    margin-bottom: 16px;
+    filter: drop-shadow(0 0 24px var(--accent-gold-glow));
+}
+
+.wolf-welcome-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    background: linear-gradient(135deg, var(--accent-gold), #FFA500);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.wolf-welcome-subtitle {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin: 0 0 8px 0;
+    line-height: 1.5;
+}
+
+.wolf-welcome-subtitle-ar {
+    font-size: 15px;
+    color: var(--text-tertiary);
+    direction: rtl;
+    margin: 0 0 40px 0;
+}
+
+.wolf-quickstart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 32px;
+    width: 100%;
+    max-width: 600px;
+}
+
+.wolf-quickstart-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.wolf-quickstart-card:hover {
+    background-color: var(--bg-surface-hover);
+    border-color: var(--accent-gold);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.wolf-quickstart-card-icon {
+    font-size: 22px;
+    margin-bottom: 4px;
+}
+
+.wolf-quickstart-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.wolf-quickstart-card-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* ========================================================================
+   CHAT MESSAGES — User (right, surface) + Assistant (left, transparent)
+   ======================================================================== */
+
 .wolf-chat-container {
-    max-width: var(--wolf-max-width);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
     margin: 0 auto;
-    padding: 0 1rem;
+    padding: 0;
 }
 
 .wolf-message {
     display: flex;
     gap: 12px;
-    margin-bottom: 1.5rem;
-    padding: 1rem 1.25rem;
-    border-radius: 14px;
-    animation: fadeIn 0.3s ease;
+    padding: 4px 0;
+    animation: wolfFadeIn 0.3s ease;
+    width: 100%;
+    align-items: flex-start;
+}
+
+@keyframes wolfFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .wolf-message-user {
-    background: linear-gradient(135deg, var(--wolf-user-bubble) 0%, var(--wolf-primary-dark) 100%);
-    color: white;
-    margin-left: 15%;
+    justify-content: flex-end;
 }
 
 .wolf-message-assistant {
-    background: var(--wolf-assistant-bubble);
-    color: var(--wolf-text);
-    margin-right: 15%;
-    border: 1px solid var(--wolf-border);
+    justify-content: flex-start;
 }
 
 .wolf-message-avatar {
     flex-shrink: 0;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-pill);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+    font-size: 16px;
+    margin-top: 2px;
+}
+
+.wolf-message-user .wolf-message-avatar {
+    background: linear-gradient(135deg, #5436DA, #8B5CF6);
+    color: white;
+    order: 2;
+}
+
+.wolf-message-assistant .wolf-message-avatar {
+    background: linear-gradient(135deg, var(--accent-gold), #FFA500);
+    color: var(--text-on-accent);
+    order: 1;
+}
+
+.wolf-message-body {
+    max-width: calc(100% - 80px);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wolf-message-user .wolf-message-body {
+    align-items: flex-end;
+    order: 1;
+}
+
+.wolf-message-assistant .wolf-message-body {
+    align-items: flex-start;
+    order: 2;
 }
 
 .wolf-message-content {
-    flex: 1;
-    min-width: 0;
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    padding: 10px 14px;
+    border-radius: var(--radius-lg);
+    font-size: 15px;
+    line-height: 1.6;
     word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
 }
 
-.wolf-message-content p:first-child {
-    margin-top: 0;
+.wolf-message-assistant .wolf-message-content {
+    background-color: transparent;
+    padding: 10px 0;
+}
+
+.wolf-message-content p {
+    margin: 0 0 8px 0;
 }
 
 .wolf-message-content p:last-child {
     margin-bottom: 0;
 }
 
-/* ---- Code blocks ---- */
-.wolf-code-block {
-    background: var(--wolf-code-bg);
-    color: var(--wolf-code-text);
-    padding: 1rem 1.25rem;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-    font-size: 0.85rem;
-    line-height: 1.5;
-    margin: 0.75rem 0;
-    border: 1px solid #374151;
+.wolf-message-content ul, .wolf-message-content ol {
+    margin: 8px 0;
+    padding-left: 24px;
 }
 
-.wolf-code-block-header {
-    background: #2d2d2d;
-    color: #d4d4d4;
-    padding: 0.4rem 1rem;
-    border-radius: 8px 8px 0 0;
-    font-size: 0.75rem;
-    font-family: 'JetBrains Mono', monospace;
-    border: 1px solid #374151;
-    border-bottom: none;
-    margin: 0.75rem 0 0 0;
+.wolf-message-content li {
+    margin: 4px 0;
+}
+
+.wolf-message-content strong {
+    color: var(--accent-gold);
+    font-weight: 600;
+}
+
+.wolf-message-content em {
+    color: var(--text-secondary);
+}
+
+.wolf-message-content h1, .wolf-message-content h2, .wolf-message-content h3,
+.wolf-message-content h4 {
+    color: var(--accent-gold);
+    margin: 16px 0 8px 0;
+    font-weight: 600;
+}
+
+.wolf-message-content h1 { font-size: 1.5em; }
+.wolf-message-content h2 { font-size: 1.3em; }
+.wolf-message-content h3 { font-size: 1.15em; }
+
+.wolf-message-timestamp {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin: 0 4px;
+    padding: 0 4px;
+}
+
+/* Thinking indicator */
+.wolf-thinking {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-style: italic;
+}
+
+.wolf-thinking-dots {
+    display: flex;
+    gap: 4px;
+}
+
+.wolf-thinking-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-pill);
+    background-color: var(--accent-gold);
+    animation: wolfThinkingPulse 1.4s infinite ease-in-out;
+}
+
+.wolf-thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.wolf-thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes wolfThinkingPulse {
+    0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+    30% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ========================================================================
+   CODE BLOCKS — Dark theme syntax highlighting
+   ======================================================================== */
+
+.wolf-code-block-wrapper {
+    margin: 12px 0;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+    background-color: var(--code-bg);
+}
+
+.wolf-code-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 6px 12px;
+    background-color: #252525;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-family: "Söhne Mono", "JetBrains Mono", monospace;
 }
 
-/* ---- Tool call display ---- */
+.wolf-code-lang {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.wolf-code-copy {
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color 0.15s;
+}
+
+.wolf-code-copy:hover {
+    color: var(--accent-gold);
+}
+
+.wolf-code-block-wrapper pre {
+    margin: 0 !important;
+    padding: 12px 16px !important;
+    background-color: var(--code-bg) !important;
+    color: var(--code-text) !important;
+    overflow-x: auto !important;
+    font-family: "Söhne Mono", "JetBrains Mono", "Courier New", monospace !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+}
+
+.wolf-code-block-wrapper code {
+    font-family: "Söhne Mono", "JetBrains Mono", monospace !important;
+    background: transparent !important;
+    color: var(--code-text) !important;
+}
+
+/* Inline code */
+.wolf-inline-code {
+    background-color: rgba(255, 215, 0, 0.1);
+    color: var(--accent-gold);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: "Söhne Mono", "JetBrains Mono", monospace;
+    font-size: 0.9em;
+    border: 1px solid var(--border-subtle);
+}
+
+/* ========================================================================
+   TOOL CALLS — Collapsible display
+   ======================================================================== */
+
 .wolf-tool-call {
-    background: #fef3c7;
-    border-left: 4px solid var(--wolf-accent);
-    padding: 0.75rem 1rem;
-    border-radius: 6px;
-    margin: 0.75rem 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
+    margin: 12px 0;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    background-color: rgba(255, 215, 0, 0.04);
+    overflow: hidden;
 }
 
 .wolf-tool-call-header {
-    font-weight: 600;
-    color: #92400e;
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    user-select: none;
+    background-color: rgba(255, 215, 0, 0.06);
+    transition: background 0.15s;
+    font-size: 13px;
+    color: var(--accent-gold);
+    font-weight: 500;
 }
 
-.wolf-tool-call-input {
-    color: #78350f;
-    margin-top: 0.5rem;
+.wolf-tool-call-header:hover {
+    background-color: rgba(255, 215, 0, 0.1);
+}
+
+.wolf-tool-call-icon {
+    font-size: 14px;
+}
+
+.wolf-tool-call-name {
+    font-family: "Söhne Mono", "JetBrains Mono", monospace;
+    color: var(--accent-gold);
+}
+
+.wolf-tool-call-arrow {
+    margin-left: auto;
+    color: var(--text-tertiary);
+    transition: transform 0.2s;
+}
+
+.wolf-tool-call.open .wolf-tool-call-arrow {
+    transform: rotate(90deg);
+}
+
+.wolf-tool-call-body {
+    padding: 12px;
+    border-top: 1px solid var(--border-subtle);
+    background-color: var(--code-bg);
+    font-family: "Söhne Mono", "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: var(--code-text);
+    display: none;
+}
+
+.wolf-tool-call.open .wolf-tool-call-body {
+    display: block;
+}
+
+.wolf-tool-call-section {
+    margin-bottom: 8px;
+}
+
+.wolf-tool-call-section-label {
+    color: var(--text-tertiary);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.wolf-tool-call-section-content {
+    color: var(--code-text);
     white-space: pre-wrap;
+    word-break: break-word;
 }
 
-.wolf-tool-result {
-    background: #ecfdf5;
-    border-left: 4px solid var(--wolf-success);
-    padding: 0.75rem 1rem;
-    border-radius: 6px;
-    margin: 0.5rem 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
-    color: #064e3b;
+.wolf-tool-result-ok {
+    color: var(--success);
 }
 
-.wolf-tool-result-error {
-    background: #fef2f2;
-    border-left-color: var(--wolf-danger);
-    color: #991b1b;
+.wolf-tool-result-err {
+    color: var(--danger);
 }
 
-/* ---- Top bar (custom header) ---- */
-.wolf-topbar {
+/* ========================================================================
+   CHAT INPUT — Fixed bottom, multi-line, auto-grow
+   ======================================================================== */
+
+.wolf-chat-input-wrapper {
+    position: fixed;
+    bottom: 0;
+    left: var(--sidebar-width);
+    right: 0;
+    background: linear-gradient(to bottom, transparent, var(--bg-page) 30%);
+    padding: 16px 24px 24px;
+    z-index: 100;
+}
+
+.wolf-chat-input-container {
+    max-width: var(--max-chat-width);
+    margin: 0 auto;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    padding: 8px 8px 8px 16px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 1.25rem;
-    background: white;
-    border-bottom: 1px solid var(--wolf-border);
-    position: sticky;
-    top: 0;
-    z-index: 999;
-    backdrop-filter: blur(8px);
-}
-
-.wolf-topbar-logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
-    font-size: 1.1rem;
-    color: var(--wolf-primary-dark);
-}
-
-.wolf-topbar-status {
-    display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 8px;
-    font-size: 0.85rem;
-    color: var(--wolf-text-muted);
+    transition: border-color 0.15s;
 }
 
-.wolf-status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    display: inline-block;
+.wolf-chat-input-container:focus-within {
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 0 2px var(--accent-gold-glow);
 }
 
-.wolf-status-dot-online { background: var(--wolf-success); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
-.wolf-status-dot-offline { background: var(--wolf-danger); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+.wolf-chat-input-container textarea {
+    flex: 1;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-primary) !important;
+    font-family: inherit !important;
+    font-size: 15px !important;
+    line-height: 1.5 !important;
+    resize: none !important;
+    padding: 8px 0 !important;
+}
 
-/* ---- Wolf trait indicators ---- */
+.wolf-chat-input-container textarea:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.wolf-chat-send-btn {
+    background-color: var(--accent-gold) !important;
+    color: var(--text-on-accent) !important;
+    border: none !important;
+    border-radius: var(--radius-md) !important;
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    transition: all 0.15s ease !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.wolf-chat-send-btn:hover:not(:disabled) {
+    background-color: #FFC700 !important;
+    transform: scale(1.05);
+}
+
+.wolf-chat-send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+}
+
+.wolf-chat-send-btn-stop {
+    background-color: var(--danger) !important;
+}
+
+.wolf-chat-input-footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 8px;
+    max-width: var(--max-chat-width);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Streamlit chat input override */
+[data-testid="stChatInput"] {
+    background: transparent !important;
+}
+
+[data-testid="stChatInput"] textarea {
+    background-color: var(--bg-input) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: 12px 16px !important;
+}
+
+[data-testid="stChatInput"] textarea:focus {
+    border-color: var(--accent-gold) !important;
+    box-shadow: 0 0 0 2px var(--accent-gold-glow) !important;
+}
+
+/* ========================================================================
+   ERROR / STATUS MESSAGES
+   ======================================================================== */
+
+.wolf-error {
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #FCA5A5;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    margin: 12px 0;
+    font-size: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.wolf-error-icon {
+    color: var(--danger);
+    font-size: 16px;
+}
+
+.wolf-warning {
+    background-color: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #FCD34D;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    margin: 12px 0;
+    font-size: 14px;
+}
+
+.wolf-info {
+    background-color: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: #93C5FD;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    margin: 12px 0;
+    font-size: 14px;
+}
+
+/* ========================================================================
+   WOLF TRAITS — Bar of 7 trait chips
+   ======================================================================== */
+
 .wolf-traits-bar {
     display: flex;
     gap: 4px;
@@ -249,230 +914,191 @@ section[data-testid="stSidebar"] h3 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--wolf-primary), var(--wolf-primary-dark));
-    color: white;
-    font-size: 16px;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(135deg, var(--accent-gold), #FFA500);
+    color: var(--text-on-accent);
+    font-size: 13px;
     cursor: help;
     transition: transform 0.15s;
 }
 
 .wolf-trait-chip:hover {
-    transform: scale(1.15);
+    transform: scale(1.2);
 }
 
 .wolf-trait-chip-inactive {
-    background: var(--wolf-bg-tertiary);
-    color: var(--wolf-text-muted);
+    background: var(--bg-surface);
+    color: var(--text-tertiary);
 }
 
-/* ---- Conversation list ---- */
-.wolf-conv-item {
-    padding: 0.6rem 0.75rem;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
+/* ========================================================================
+   RTL — Arabic support
+   ======================================================================== */
 
-.wolf-conv-item:hover {
-    background: var(--wolf-bg-tertiary);
-}
-
-.wolf-conv-item-active {
-    background: var(--wolf-primary);
-    color: white;
-}
-
-.wolf-conv-item-active:hover {
-    background: var(--wolf-primary-dark);
-}
-
-.wolf-conv-title {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.9rem;
-}
-
-.wolf-conv-delete {
-    opacity: 0.5;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
-    padding: 0;
-}
-
-.wolf-conv-item:hover .wolf-conv-delete {
-    opacity: 1;
-}
-
-/* ---- Metric cards ---- */
-.wolf-metric-card {
-    background: white;
-    padding: 1.25rem 1rem;
-    border-radius: 10px;
-    border: 1px solid var(--wolf-border);
-    text-align: center;
-    transition: transform 0.15s, box-shadow 0.15s;
-}
-
-.wolf-metric-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.wolf-metric-value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--wolf-primary-dark);
-    line-height: 1.1;
-}
-
-.wolf-metric-label {
-    font-size: 0.85rem;
-    color: var(--wolf-text-muted);
-    margin-top: 0.25rem;
-}
-
-/* ---- Chat input (fixed bottom) ---- */
-.wolf-chat-input-wrapper {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to bottom, transparent, var(--wolf-bg) 30%);
-    padding: 1rem;
-    z-index: 100;
-}
-
-.wolf-chat-input-inner {
-    max-width: var(--wolf-max-width);
-    margin: 0 auto;
-}
-
-/* ---- Streamlit chat input override (force multi-line) ---- */
-[data-testid="stChatInput"] textarea {
-    border-radius: 18px !important;
-    border: 1px solid var(--wolf-border) !important;
-    padding: 0.75rem 1rem !important;
-}
-
-[data-testid="stChatInput"] textarea:focus {
-    border-color: var(--wolf-primary) !important;
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important;
-}
-
-/* ---- Expander (collapsible cards) ---- */
-.streamlit-expanderHeader {
-    background: var(--wolf-bg-secondary);
-    border-radius: 8px;
-    font-weight: 500;
-}
-
-/* ---- Banners / alerts ---- */
-.wolf-banner {
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    margin: 0.75rem 0;
-    border-left: 4px solid;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-}
-
-.wolf-banner-info { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
-.wolf-banner-success { background: #f0fdf4; border-color: #22c55e; color: #166534; }
-.wolf-banner-warning { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
-.wolf-banner-danger { background: #fef2f2; border-color: #ef4444; color: #991b1b; }
-
-/* ---- Animations ---- */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-}
-
-.wolf-thinking-pulse {
-    display: inline-block;
-    animation: pulse 1.4s ease-in-out infinite;
-}
-
-/* ---- RTL support for Arabic ---- */
 .wolf-rtl {
     direction: rtl;
     text-align: right;
 }
 
-.wolf-bilingual-label {
-    display: inline-block;
+.wolf-bilingual {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
-/* ---- Empty state ---- */
+.wolf-bilingual-ar {
+    color: var(--text-tertiary);
+    font-size: 0.85em;
+}
+
+/* ========================================================================
+   EMPTY STATE — When no messages
+   ======================================================================== */
+
 .wolf-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
     text-align: center;
-    padding: 3rem 1rem;
-    color: var(--wolf-text-muted);
 }
 
-.wolf-empty-state-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
+.wolf-empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.6;
 }
 
-.wolf-empty-state-text {
-    font-size: 1.1rem;
+.wolf-empty-text {
+    color: var(--text-secondary);
+    font-size: 16px;
 }
 
-/* ---- Tool button styling ---- */
-.wolf-tool-btn {
-    background: var(--wolf-bg-secondary);
-    border: 1px solid var(--wolf-border);
-    border-radius: 8px;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    transition: all 0.15s;
+/* ========================================================================
+   SETTINGS EXPANDER
+   ======================================================================== */
+
+.streamlit-expanderHeader {
+    background-color: var(--bg-surface) !important;
+    color: var(--text-primary) !important;
+    border-radius: var(--radius-md) !important;
+    border: 1px solid var(--border-subtle) !important;
 }
 
-.wolf-tool-btn:hover {
-    background: var(--wolf-bg-tertiary);
-    border-color: var(--wolf-border-dark);
+.streamlit-expanderContent {
+    background-color: var(--bg-page) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-top: none !important;
+    border-radius: 0 0 var(--radius-md) var(--radius-md) !important;
 }
 
-/* ---- Header gradient banner ---- */
-.wolf-header-gradient {
-    background: linear-gradient(135deg, var(--wolf-primary) 0%, var(--wolf-primary-dark) 100%);
-    color: white;
-    padding: 1.5rem;
-    border-radius: 12px;
-    margin-bottom: 1.5rem;
+.wolf-slider {
+    padding: 0 8px;
 }
 
-.wolf-header-gradient h1 {
-    margin: 0;
-    color: white;
-    font-size: 1.75rem;
+.wolf-slider label {
+    color: var(--text-secondary) !important;
+    font-size: 13px !important;
 }
 
-.wolf-header-gradient p {
-    margin: 0.5rem 0 0 0;
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.95rem;
+.wolf-slider [data-baseweb="slider"] {
+    background-color: var(--bg-surface) !important;
 }
 
-/* ---- Spinner override ---- */
-.stSpinner > div {
-    border-color: var(--wolf-primary) !important;
+.wolf-slider [data-baseweb="slider"] > div > div {
+    background-color: var(--accent-gold) !important;
+}
+
+/* ========================================================================
+   METRIC CARDS
+   ======================================================================== */
+
+.wolf-metric-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.wolf-metric-card:hover {
+    background-color: var(--bg-surface-hover);
+    border-color: var(--accent-gold);
+    transform: translateY(-2px);
+}
+
+.wolf-metric-icon {
+    font-size: 24px;
+    margin-bottom: 6px;
+}
+
+.wolf-metric-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent-gold);
+    line-height: 1.1;
+}
+
+.wolf-metric-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+/* ========================================================================
+   SCROLLBAR — Dark themed
+   ======================================================================== */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-page);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+}
+
+/* ========================================================================
+   ANIMATIONS
+   ======================================================================== */
+
+@keyframes wolfFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes wolfSlideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes wolfPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.wolf-anim-fade-in {
+    animation: wolfFadeIn 0.3s ease;
+}
+
+.wolf-anim-slide-in {
+    animation: wolfSlideIn 0.25s ease;
+}
+
+.wolf-anim-pulse {
+    animation: wolfPulse 1.4s ease-in-out infinite;
 }
