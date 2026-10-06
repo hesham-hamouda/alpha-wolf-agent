@@ -81,12 +81,19 @@ class AlphaWolfBody:
         self.zvec_dir = self.root / "memory" / "embeddings" / "zvec"
         self.backups_dir = self.root / "backups"
         self.curation_log_jsonl = self.root / "curation_log.jsonl"
+        self.sqlite_conn = None
+        self.chroma_client = None
+        self.graph = None
 
-        # Initialize connections
-        self._init_chromadb()
-        self._init_networkx()
-        self._init_sqlite()
-        self._init_zvec()
+        # Initialize connections — close any partially-initialized resources on failure
+        try:
+            self._init_chromadb()
+            self._init_networkx()
+            self._init_sqlite()
+            self._init_zvec()
+        except Exception:
+            self.close()
+            raise
 
     # ========================================================================
     # Initialization (private)
@@ -401,20 +408,96 @@ class AlphaWolfBody:
 
     def add_relation(self, source_id: str, target_id: str, edge_type: str,
                      weight: float = 1.0, attributes: Optional[dict] = None) -> str:
-        """Add typed edge to knowledge graph."""
+        """Add typed edge to knowledge graph.
+
+        Phase 51 FK fix: source_id / target_id may be entity NAMES (as sent by
+        /v1/graph/relation) or UUIDs (legacy path). We resolve each side to a
+        real entities.id; if the entity is absent we insert a minimal row so the
+        FK constraint on relations(source_id) -> entities(id) succeeds.
+
+        Iron Law #36: every auto-created entity is logged to curation_log.
+        """
         if self.graph is None:
             return ""
+
+        def _ensure_entity(side_id: str) -> str:
+            """Resolve side_id (UUID or name) to entities.id, auto-creating if needed."""
+            # Path A: caller passed a real UUID
+            cur = self.sqlite_conn.execute(
+                "SELECT id FROM entities WHERE id = ? AND deleted_at IS NULL",
+                (side_id,),
+            ).fetchone()
+            if cur:
+                return cur[0]
+            # Path B: caller passed a NAME (frontend text_input → name)
+            cur = self.sqlite_conn.execute(
+                "SELECT id FROM entities WHERE name = ? AND deleted_at IS NULL LIMIT 1",
+                (side_id,),
+            ).fetchone()
+            if cur:
+                return cur[0]
+            # Path C: auto-create (FK fix) — UNIQUE(node_type, name) guards dups
+            new_id = str(uuid.uuid4())
+            try:
+                self.sqlite_conn.execute(
+                    "INSERT INTO entities(id, node_type, name, attributes) "
+                    "VALUES(?, ?, ?, ?)",
+                    (
+                        new_id,
+                        "entity",
+                        side_id,
+                        json.dumps({
+                            "auto_created": True,
+                            "origin": "add_relation FK fix (Phase 51)",
+                        }),
+                    ),
+                )
+                # Sync to NetworkX so subsequent get_related() works
+                if self.graph is not None and new_id not in self.graph:
+                    self.graph.add_node(
+                        new_id,
+                        id=new_id,
+                        node_type="entity",
+                        name=side_id,
+                        auto_created=True,
+                    )
+                # Iron Law #36 audit trail
+                self.sqlite_conn.execute(
+                    "INSERT INTO curation_log(action, target_kb, target_id, summary, source) "
+                    "VALUES(?, ?, ?, ?, ?)",
+                    (
+                        "add",
+                        "entities",
+                        new_id,
+                        f"Auto-created from add_relation: name={side_id}",
+                        "FK fix Phase 51",
+                    ),
+                )
+                return new_id
+            except sqlite3.IntegrityError:
+                # Race: another writer inserted the same (node_type, name). Re-resolve.
+                cur = self.sqlite_conn.execute(
+                    "SELECT id FROM entities WHERE name = ? AND deleted_at IS NULL LIMIT 1",
+                    (side_id,),
+                ).fetchone()
+                if cur:
+                    return cur[0]
+                raise
+
+        resolved_source = _ensure_entity(source_id)
+        resolved_target = _ensure_entity(target_id)
+
         rid = str(uuid.uuid4())
         attrs = attributes or {}
         attrs.update({"edge_type": edge_type, "weight": weight, "id": rid})
-        self.graph.add_edge(source_id, target_id, **attrs)
+        self.graph.add_edge(resolved_source, resolved_target, **attrs)
         self._save_graph()
         # Sync to SQLite
         with self.sqlite_conn:
             self.sqlite_conn.execute(
                 "INSERT OR IGNORE INTO relations(id, source_id, target_id, edge_type, weight, attributes, graph_synced_at) "
                 "VALUES(?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
-                (rid, source_id, target_id, edge_type, weight, json.dumps(attrs)),
+                (rid, resolved_source, resolved_target, edge_type, weight, json.dumps(attrs)),
             )
         return rid
 
@@ -520,7 +603,7 @@ class AlphaWolfBody:
             },
             "memory": {
                 "episodic_count": len(self.recall_episodes(min_importance=1, limit=1000)),
-                "active_goals": len(self.recall_goals(status="active", limit=100)),
+                "active_goals": len(self.recall_goals(status="open", limit=100)),
                 "open_goals": len(self.recall_goals(status="open", limit=100)),
             },
         }
@@ -563,7 +646,8 @@ class AlphaWolfBody:
     def close(self):
         """Close all connections."""
         try:
-            self.sqlite_conn.close()
+            if self.sqlite_conn is not None:
+                self.sqlite_conn.close()
         except Exception:
             pass
 
