@@ -156,7 +156,9 @@ body/memory/state.db-shm
 body/memory/state.db-wal
 body/knowledge_graph/chromadb/chroma.sqlite3
 body/knowledge_graph/chromadb/chroma.sqlite3-*
+body/knowledge_graph/chromadb/*/
 body/knowledge_graph/networkx/graph.pickle
+body/knowledge_graph/embeddings/
 # Root dev artifacts
 main_diff.txt
 frontend_home.html
