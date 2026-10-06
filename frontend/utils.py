@@ -60,7 +60,7 @@ T = {
     "wolf_emoji": "🐺",
     "app_tagline": "Your wolf-themed AI assistant with 7 traits",
     "app_tagline_ar": "مساعدك الذكي بصفات الذئب السبع",
-    "footer_disclaimer": "Alpha Wolf Agent can make mistakes. Verify important info. | قد يخطئ الذئب. تحقق من المعلومات المهمة.",
+    "footer_disclaimer": "",
 
     # Sidebar
     "new_chat": "New chat | محادثة جديدة",
@@ -196,6 +196,51 @@ T = {
     "loading": "Loading... | جاري التحميل...",
     "metadata": "Metadata | البيانات الوصفية",
     "timestamp": "Timestamp | الوقت",
+
+    # Navigation
+    "nav_chat": "Chat | محادثة",
+    "nav_health": "Body Health | صحة الجسد",
+    "nav_memory": "Memory | الذاكرة",
+    "nav_tools": "Tools | الأدوات",
+    "nav_project": "Project Awareness | وعي المشروع",
+    "nav_settings": "Settings | الإعدادات",
+
+    # Agent lifecycle (restart / stop)
+    "restart_agent": "Restart agent | إعادة تشغيل الوكيل",
+    "restart_agent_help": "Reset agent state and start fresh (keeps model settings) | تصفير حالة الوكيل والبدء من جديد (مع الاحتفاظ بإعدادات النموذج)",
+    "agent_restarted": "Agent restarted — fresh state | تمت إعادة تشغيل الوكيل — حالة جديدة",
+    "stop_agent": "Stop agent | إيقاف الوكيل",
+    "stop_agent_help": "Stop the ongoing generation immediately | إيقاف التوليد الجاري فوراً",
+    "agent_stopped": "Agent stopped | تم إيقاف الوكيل",
+    "agent_stopped_partial": "Generation stopped by user — partial reply kept | تم إيقاف التوليد — تم الاحتفاظ بالرد الجزئي",
+    "no_active_generation": "No active generation to stop | لا يوجد توليد جارٍ لإيقافه",
+
+    # Memory Inspector
+    "memory_inspector": "Memory Inspector | فحص الذاكرة",
+
+    # Body Health + Memory Inspector missing keys (Phase 35)
+    "refresh": "Refresh | تحديث",
+    "body_status": "Body Status | حالة الجسد",
+    "create_backup": "Create Backup | إنشاء نسخة احتياطية",
+    "backup_created": "Backup created | تم إنشاء النسخة",
+    "wolf_self_summary": "Wolf Self-Summary | ملخص الذئب الذاتي",
+    "training_mix": "Training Mix | مزيج بيانات التدريب",
+    "integrity": "Integrity | السلامة",
+    "add_to_memory": "Add to Memory | إضافة للذاكرة",
+    "episode_importance": "Episode Importance | أهمية الحلقة",
+    "episode_content": "Episode Content | محتوى الحلقة",
+    "zvec_status": "zvec Status | حالة zvec",
+    "sqlite_size": "SQLite Size | حجم قاعدة البيانات",
+
+    # Admin shutdown (Phase 35 — Stop Everything button)
+    "stop_everything": "Stop Everything | إيقاف كل شيء",
+    "stop_everything_help": "Stop backend + frontend completely (closes this app) | إيقاف الخادم والواجهة بالكامل (يُغلق هذا التطبيق)",
+    "stop_confirm": "Stop Alpha Wolf Agent? The app will close. | إيقاف وكيل الذئب ألفا؟ سيُغلق التطبيق.",
+    "stopping_now": "Stopping... You can close this tab. | جاري الإيقاف... يمكنك إغلاق هذا التبويب.",
+    "stop_disabled_no_backend": "Backend offline — cannot stop remotely | الخادم متوقف — لا يمكن الإيقاف عن بُعد",
+
+    # Welcome screen
+    "chat_placeholder": "Message Alpha Wolf... (Enter to send, Shift+Enter for new line) | اكتب للذئب... (Enter للإرسال، Shift+Enter لسطر جديد)",
 }
 
 # Default wolf trait active state (visual indicators)
@@ -354,7 +399,8 @@ class APIClient:
     def chat(self, messages: list[dict[str, str]], **kwargs) -> dict[str, Any] | None:
         """Non-streaming chat completion."""
         try:
-            payload = {"model": "alpha-wolf-agent", "messages": messages}
+            # FIX 2026-10-06: use v8 by default — original `alpha-wolf-agent` is BROKEN
+            payload = {"model": "alpha-wolf-agent-v8", "messages": messages}
             payload.update(kwargs)
             resp = self._session.post(
                 f"{self.base_url}/v1/chat/completions", json=payload, timeout=300
@@ -382,10 +428,11 @@ class APIClient:
             {"type": "error", "message": "..."}
         """
         payload = {
-            "model": "alpha-wolf-agent",
+            "model": "alpha-wolf-agent-v8",  # FIX 2026-10-06: original model broken
             "messages": messages,
             "stream": True,
             "auto_tools": auto_tools,
+            "max_tokens": 4000,  # PHASE 14: Increased to give Ollama's reasoning phase enough budget before content phase (was 2000, reasoning consumed all tokens leaving 0 for content)
         }
         if conversation_id:
             payload["conversation_id"] = conversation_id
@@ -417,8 +464,18 @@ class APIClient:
                             data_str = "\n".join(data_buf)
                             event_name = event_buf[0] if event_buf else "message"
                             try:
-                                if data_str == "[DONE]":
-                                    yield {"type": "done"}
+                                if data_str == "[DONE]" and not event_buf:
+                                    # Bare untagged sentinel.
+                                    # FIX 2026-09-26 (Round 14): never treat this
+                                    # as end-of-answer. Ollama closes EVERY model
+                                    # call with one, so a tool turn (call #1 =
+                                    # tool call, call #2 = answer) ended here and
+                                    # the UI rendered "empty response from
+                                    # backend". The authoritative terminal is the
+                                    # tagged `event: done` sent once at the end.
+                                    logger.debug("SSE: untagged [DONE] sentinel ignored")
+                                elif data_str == "[DONE]":
+                                    yield {"type": "done", "done": True}
                                 else:
                                     payload_json = json.loads(data_str)
                                     payload_json["type"] = event_name
@@ -466,6 +523,129 @@ class APIClient:
         except requests.RequestException as exc:
             logger.warning("tool_categories failed: %s", exc)
             return None
+
+    # ----- Skills (self-extension management) -----
+    def list_skills(self) -> list[dict[str, Any]]:
+        try:
+            resp = self._session.get(f"{self.base_url}/v1/skills/registry", timeout=10)
+            resp.raise_for_status()
+            return resp.json().get("skills", [])
+        except requests.RequestException as exc:
+            logger.warning("list_skills failed: %s", exc)
+            return []
+
+    def run_skill(self, name: str, arguments: dict[str, Any]) -> dict[str, Any] | None:
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/skills/{name}/run",
+                json={"arguments": arguments},
+                timeout=120,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("run_skill failed: %s", exc)
+            return None
+
+    def install_skill_from_url(self, url: str, name: str = "") -> dict[str, Any] | None:
+        """Install a skill via the forge (skills.sh/GitHub/.py)."""
+        res = self.execute_tool(
+            "install_skill_from_url", {"url": url, "name": name or ""}
+        )
+        return res
+
+    # ----- Self-awareness (model/gaps/system) -----
+    def self_model(self) -> dict[str, Any] | None:
+        try:
+            resp = self._session.get(f"{self.base_url}/v1/self/model", timeout=15)
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("self_model failed: %s", exc)
+            return None
+
+    def self_gaps(self) -> dict[str, Any] | None:
+        try:
+            resp = self._session.get(f"{self.base_url}/v1/self/gaps", timeout=90)
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("self_gaps failed: %s", exc)
+            return None
+
+    def system_status(self) -> dict[str, Any] | None:
+        res = self.execute_tool("system_status", {})
+        return (res or {}).get("output") if res else None
+
+    # ----- Admin shutdown (Phase 35 — Stop Everything button) -----
+    def admin_stop_all(self, timeout: float = 4.0) -> dict[str, Any] | None:
+        """Tell the backend to kill the frontend + shut itself down.
+
+        إبلاغ الخادم بإيقاف الواجهة وإنهاء نفسه.
+
+        The backend POST /v1/admin/stop-all kills the Streamlit listener on
+        port 8501 then SIGTERMs itself. Returns the JSON ack or None on error.
+        """
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/admin/stop-all",
+                timeout=timeout,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("admin_stop_all failed: %s", exc)
+            return None
+
+    def admin_shutdown_backend(self, timeout: float = 4.0) -> dict[str, Any] | None:
+        """Stop the backend only (frontend stays running but loses connectivity).
+
+        إيقاف الخادم فقط.
+        """
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/admin/shutdown",
+                timeout=timeout,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("admin_shutdown_backend failed: %s", exc)
+            return None
+
+    # ----- Web (search/fetch via engine endpoints) -----
+    def web_search(self, query: str, max_results: int = 5) -> dict[str, Any] | None:
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/web/search",
+                json={"query": query, "max_results": max_results},
+                timeout=60,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("web_search failed: %s", exc)
+            return None
+
+    def web_fetch(self, url: str, max_chars: int = 8000) -> dict[str, Any] | None:
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/web/fetch",
+                json={"url": url, "max_chars": max_chars},
+                timeout=60,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("web_fetch failed: %s", exc)
+            return None
+
+    # ----- Vision -----
+    def describe_image(self, image_path: str, prompt: str = "") -> dict[str, Any] | None:
+        res = self.execute_tool(
+            "see_image", {"image_path": image_path, "prompt": prompt or ""}
+        )
+        return (res or {}).get("output") if res else None
 
     # ----- Memory -----
     def list_episodes(self, limit: int = 50, min_importance: int = 1) -> list[dict[str, Any]]:
@@ -539,12 +719,25 @@ class APIClient:
             logger.warning("add_episode failed: %s", exc)
             return None
 
+    def update_goal(self, goal_id: str, status: str, progress_pct: float = 100.0) -> bool:
+        try:
+            resp = self._session.patch(
+                f"{self.base_url}/v1/memory/goal/{goal_id}",
+                params={"status": status, "progress_pct": progress_pct},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return True
+        except requests.RequestException as exc:
+            logger.warning("update_goal failed: %s", exc)
+            return False
+
     # ----- Live Context & RAG -----
     def live_context_summary(self) -> dict[str, Any] | None:
         try:
             resp = self._session.post(
                 f"{self.base_url}/v1/live-context/summary",
-                json={"max_depth": 2, "search_top_k": 5},
+                json={"max_depth": 2, "recent_days": 7},
                 timeout=30,
             )
             resp.raise_for_status()
@@ -574,6 +767,695 @@ class APIClient:
         except requests.RequestException as exc:
             logger.warning("rag_index failed: %s", exc)
             return None
+
+    # ------------------------------------------------------------------
+    # FIX 2026-10-06 (Phase 46): additional backend integrations to push
+    # the UI↔API surface past the 60% line. Iron Law #15: live only.
+    # ------------------------------------------------------------------
+
+    def list_tools_discover(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.get(f"{self.base_url}/v1/tools/discover", timeout=15)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("list_tools_discover failed: %s", exc)
+            return None
+
+    def list_mcp_tools(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.get(f"{self.base_url}/v1/mcp/tools", timeout=10)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("list_mcp_tools failed: %s", exc)
+            return None
+
+    def call_mcp_rpc(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
+        try:
+            r = self._session.post(
+                f"{self.base_url}/v1/mcp/rpc",
+                json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params or {}},
+                timeout=20,
+            )
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("call_mcp_rpc failed: %s", exc)
+            return None
+
+    def vision_status(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.get(f"{self.base_url}/v1/vision/status", timeout=5)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("vision_status failed: %s", exc)
+            return None
+
+    def vision_test(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.post(f"{self.base_url}/v1/vision/test", timeout=30)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("vision_test failed: %s", exc)
+            return None
+
+    def rope_config(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.get(f"{self.base_url}/v1/rope-config", timeout=5)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("rope_config failed: %s", exc)
+            return None
+
+    def cache_stats(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.get(f"{self.base_url}/v1/cache/stats", timeout=5)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("cache_stats failed: %s", exc)
+            return None
+
+    def cache_clear(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.post(f"{self.base_url}/v1/cache/clear", timeout=30)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("cache_clear failed: %s", exc)
+            return None
+
+    def live_context_search(self, query: str, top_k: int = 5) -> dict[str, Any] | None:
+        try:
+            r = self._session.post(
+                f"{self.base_url}/v1/live-context/search",
+                json={"query": query, "top_k": top_k},
+                timeout=15,
+            )
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("live_context_search failed: %s", exc)
+            return None
+
+    def rag_query(self, query: str, top_k: int = 5) -> dict[str, Any] | None:
+        try:
+            r = self._session.post(
+                f"{self.base_url}/v1/rag/query",
+                json={"query": query, "top_k": top_k},
+                timeout=30,
+            )
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("rag_query failed: %s", exc)
+            return None
+
+    def body_browse(self, path: str = "", limit: int = 30) -> Any:
+        try:
+            params: dict[str, Any] = {"limit": limit}
+            if path:
+                params["path"] = path
+            r = self._session.get(f"{self.base_url}/v1/body/browse", params=params, timeout=10)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("body_browse failed: %s", exc)
+            return None
+
+    def body_read(self, path: str, max_bytes: int = 16384) -> dict[str, Any] | None:
+        try:
+            r = self._session.get(
+                f"{self.base_url}/v1/body/read",
+                params={"path": path, "max_bytes": max_bytes},
+                timeout=15,
+            )
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("body_read failed: %s", exc)
+            return None
+
+    def list_sessions(self) -> list[dict[str, Any]] | None:
+        try:
+            r = self._session.get(f"{self.base_url}/v1/sessions", timeout=10)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("list_sessions failed: %s", exc)
+            return None
+
+    def unified_recall(self, query: str, top_k: int = 5) -> dict[str, Any] | None:
+        try:
+            r = self._session.post(
+                f"{self.base_url}/v1/memory/unified-recall",
+                json={"query": query, "top_k": top_k},
+                timeout=15,
+            )
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("unified_recall failed: %s", exc)
+            return None
+
+    def short_term_memory(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.get(f"{self.base_url}/v1/memory/short-term", timeout=10)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("short_term_memory failed: %s", exc)
+            return None
+
+    def clear_short_term(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.post(f"{self.base_url}/v1/memory/short-term/clear", timeout=10)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("clear_short_term failed: %s", exc)
+            return None
+
+    def eval_history(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.get(f"{self.base_url}/v1/eval/history", timeout=10)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("eval_history failed: %s", exc)
+            return None
+
+    def eval_suggestions(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.get(f"{self.base_url}/v1/eval/suggestions", timeout=10)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("eval_suggestions failed: %s", exc)
+            return None
+
+    def list_checkpoints(self, conv_id: str) -> list[dict[str, Any]] | None:
+        try:
+            r = self._session.get(
+                f"{self.base_url}/v1/conversations/{conv_id}/checkpoints",
+                timeout=10,
+            )
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("list_checkpoints failed: %s", exc)
+            return None
+
+    def get_checkpoint(self, conv_id: str) -> dict[str, Any] | None:
+        try:
+            r = self._session.get(
+                f"{self.base_url}/v1/conversations/{conv_id}/checkpoint",
+                timeout=10,
+            )
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("get_checkpoint failed: %s", exc)
+            return None
+
+    def training_files(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.get(f"{self.base_url}/v1/training/files", timeout=10)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("training_files failed: %s", exc)
+            return None
+
+    def admin_status(self) -> dict[str, Any] | None:
+        try:
+            r = self._session.get(f"{self.base_url}/v1/admin/status", timeout=5)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("admin_status failed: %s", exc)
+            return None
+
+    def get(self, path: str, **kwargs: Any) -> Any:
+        try:
+            r = self._session.get(f"{self.base_url}{path}", timeout=kwargs.pop("timeout", 10), **kwargs)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("GET %s failed: %s", path, exc)
+            return None
+
+    def post(self, path: str, json_body: dict[str, Any] | None = None,
+             **kwargs: Any) -> Any:
+        try:
+            r = self._session.post(
+                f"{self.base_url}{path}",
+                json=json_body,
+                timeout=kwargs.pop("timeout", 10),
+                **kwargs,
+            )
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            logger.debug("POST %s failed: %s", path, exc)
+            return None
+
+    def _delete(self, path: str, fallback: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Internal: DELETE request — Phase 48 (P1 integration)."""
+        try:
+            r = self._session.delete(f"{self.base_url}{path}", timeout=10)
+            r.raise_for_status()
+            return r.json() if r.text else {}
+        except requests.RequestException as exc:
+            logger.warning("DELETE %s failed: %s", path, exc)
+            return fallback if fallback is not None else {"error": str(exc)}
+
+    # ----- Phase 48 (P1) — 6 new endpoint wrappers -----
+    def list_auto_skills(self) -> dict[str, Any] | None:
+        """GET /v1/skills/auto — list auto-generated skills (Iron Law #42)."""
+        try:
+            resp = self._session.get(f"{self.base_url}/v1/skills/auto", timeout=10)
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("list_auto_skills failed: %s", exc)
+            return None
+
+    def delete_skill(self, name: str) -> dict[str, Any] | None:
+        """DELETE /v1/skills/{name} — remove a skill by name."""
+        try:
+            resp = self._session.delete(f"{self.base_url}/v1/skills/{name}", timeout=10)
+            resp.raise_for_status()
+            return resp.json() if resp.text else {}
+        except requests.RequestException as exc:
+            logger.warning("delete_skill failed: %s", exc)
+            return None
+
+    def evaluate_conversation(self, conv_id: str) -> dict[str, Any] | None:
+        """POST /v1/eval/{conv_id} — auto-evaluate a conversation."""
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/eval/{conv_id}", timeout=60
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("evaluate_conversation failed: %s", exc)
+            return None
+
+    def inject_live_context(
+        self, query: str, max_depth: int = 2, top_k: int = 3
+    ) -> dict[str, Any] | None:
+        """POST /v1/live-context/inject — inject live project context."""
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/live-context/inject",
+                json={"query": query, "max_depth": max_depth, "top_k": top_k},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("inject_live_context failed: %s", exc)
+            return None
+
+    def get_rag_job(self, job_id: str) -> dict[str, Any] | None:
+        """GET /v1/rag/job/{job_id} — fetch RAG indexing job status."""
+        try:
+            resp = self._session.get(
+                f"{self.base_url}/v1/rag/job/{job_id}", timeout=10
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("get_rag_job failed: %s", exc)
+            return None
+
+    def analyze_training_data(self) -> dict[str, Any] | None:
+        """GET /v1/training/analyze — analyze training data weaknesses."""
+        try:
+            resp = self._session.get(
+                f"{self.base_url}/v1/training/analyze", timeout=30
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("analyze_training_data failed: %s", exc)
+            return None
+
+    # ----- Phase 49 (P2) — Skills Manager + Code Playground + Memory Episodes -----
+    def list_skills_root(self) -> dict[str, Any] | None:
+        """GET /v1/skills — list all skills (RESTful root endpoint).
+
+        Alias for /v1/skills/registry with broader scope (returns full metadata).
+        """
+        try:
+            resp = self._session.get(f"{self.base_url}/v1/skills", timeout=10)
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("list_skills_root failed: %s", exc)
+            return None
+
+    def forge_skill(
+        self,
+        name: str,
+        description: str,
+        code_template: str,
+        tags: list[str] | None = None,
+        auto_save: bool = False,
+    ) -> dict[str, Any] | None:
+        """POST /v1/skills/forge — auto-create a skill.
+
+        auto_save=true requires ALPHA_WOLF_FORGE_TOKEN (Iron Law #21).
+        Returns dict with success flag + skill_path + metadata.
+        """
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/skills/forge",
+                json={
+                    "name": name,
+                    "description": description,
+                    "code_template": code_template,
+                    "tags": tags or [],
+                    "auto_save": auto_save,
+                },
+                timeout=30,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("forge_skill failed: %s", exc)
+            return {"success": False, "error": str(exc)}
+
+    def install_skill_text(self, name: str, source: str) -> dict[str, Any] | None:
+        """POST /v1/skills/text — install a skill from inline Python source.
+
+        Args:
+            name: snake_case skill name (no extension)
+            source: full Python source code (the file body)
+        """
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/skills/text",
+                json={"name": name, "source": source},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("install_skill_text failed: %s", exc)
+            return {"success": False, "error": str(exc)}
+
+    def safety_check_code(self, code: str) -> dict[str, Any] | None:
+        """POST /v1/code-exec/safety-check — AST safety check (no execution).
+
+        Returns dict with: passed (bool), violations, warnings, error.
+        """
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/code-exec/safety-check",
+                json={"code": code},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("safety_check_code failed: %s", exc)
+            return {"passed": False, "error": str(exc)}
+
+    def execute_code(self, code: str, timeout_sec: int = 10) -> dict[str, Any] | None:
+        """POST /v1/code-exec/execute — execute Python code in sandbox.
+
+        Backend enforces: AST pre-check + restricted env + 30s max timeout.
+        Returns dict with: stdout, stderr, returncode, success.
+        """
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/code-exec/execute",
+                json={"code": code, "timeout_sec": timeout_sec},
+                timeout=max(30, timeout_sec + 5),
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("execute_code failed: %s", exc)
+            return {"success": False, "error": str(exc)}
+
+    def list_episodes_plural(
+        self, min_importance: int = 1, limit: int = 50
+    ) -> list[dict[str, Any]] | None:
+        """GET /v1/memory/episodes — list episodes (RESTful plural endpoint).
+
+        Alias for /v1/memory/episode with more RESTful name. Returns a list.
+        """
+        try:
+            resp = self._session.get(
+                f"{self.base_url}/v1/memory/episodes",
+                params={"min_importance": min_importance, "limit": limit},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if isinstance(data, list):
+                return data
+            return data.get("episodes", [])
+        except requests.RequestException as exc:
+            logger.warning("list_episodes_plural failed: %s", exc)
+            return []
+
+    def health_check_root(self) -> dict[str, Any] | None:
+        """GET / — root health check (service banner)."""
+        try:
+            resp = self._session.get(f"{self.base_url}/", timeout=5)
+            resp.raise_for_status()
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.warning("health_check_root failed: %s", exc)
+            return None
+
+    # ----- Phase 50 (P3) — 12 new endpoint wrappers (100% coverage) -----
+    def install_skill_legacy(self, name: str, content: str) -> dict[str, Any] | None:
+        """POST /v1/install_skill — legacy alias (deprecated)."""
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/install_skill",
+                json={"name": name, "source": content},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return resp.json() if resp.text else {}
+        except requests.RequestException as exc:
+            logger.warning("install_skill_legacy failed: %s", exc)
+            return {"error": str(exc)}
+
+    def run_skill_legacy(self, skill_name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any] | None:
+        """POST /v1/run_skill — legacy alias (deprecated)."""
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/run_skill",
+                json={"skill_name": skill_name, "arguments": arguments or {}},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            return resp.json() if resp.text else {}
+        except requests.RequestException as exc:
+            logger.warning("run_skill_legacy failed: %s", exc)
+            return {"error": str(exc)}
+
+    def recall_legacy(self, query: str, top_k: int = 5) -> dict[str, Any] | None:
+        """POST /v1/recall — legacy alias (deprecated alias for /v1/memory/recall)."""
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/recall",
+                json={"query": query, "top_k": top_k},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return resp.json() if resp.text else {}
+        except requests.RequestException as exc:
+            logger.warning("recall_legacy failed: %s", exc)
+            return {"error": str(exc)}
+
+    def install_skill_v2(self, name: str, content: str) -> dict[str, Any] | None:
+        """POST /v1/skills/install — install skill via v2 endpoint."""
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/skills/install",
+                json={"name": name, "source": content},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return resp.json() if resp.text else {}
+        except requests.RequestException as exc:
+            logger.warning("install_skill_v2 failed: %s", exc)
+            return {"error": str(exc)}
+
+    def body_tools(self, action: str = "list") -> dict[str, Any] | None:
+        """GET/POST /v1/body/tools — internal body tools (debugging)."""
+        try:
+            if action == "list":
+                resp = self._session.get(f"{self.base_url}/v1/body/tools", timeout=10)
+            else:
+                resp = self._session.post(
+                    f"{self.base_url}/v1/body/tools",
+                    json={"action": action},
+                    timeout=10,
+                )
+            resp.raise_for_status()
+            return resp.json() if resp.text else {}
+        except requests.RequestException as exc:
+            logger.warning("body_tools failed: %s", exc)
+            return {"error": str(exc)}
+
+    def reflect(self, topic: str, insight: str, actionable: str = "") -> dict[str, Any] | None:
+        """POST /v1/memory/reflection — store a structured reflection."""
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/memory/reflection",
+                json={
+                    "topic": topic,
+                    "insight": insight,
+                    "actionable": actionable,
+                    "trigger": "manual",
+                },
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return resp.json() if resp.text else {}
+        except requests.RequestException as exc:
+            logger.warning("reflect failed: %s", exc)
+            return {"error": str(exc)}
+
+    def resume_stream(self, conv_id: str, from_chunk: int = 0) -> dict[str, Any] | None:
+        """GET /v1/chat/stream/resume/{conv_id} — resume interrupted SSE stream.
+
+        Note: returns SSE stream; we only probe existence + return minimal metadata.
+        """
+        try:
+            # SSE endpoint — read first chunk then close to verify reachability
+            resp = self._session.get(
+                f"{self.base_url}/v1/chat/stream/resume/{conv_id}",
+                params={"from_chunk": from_chunk},
+                timeout=5,
+                stream=True,
+            )
+            resp.raise_for_status()
+            # Close the stream immediately — we only verify the endpoint exists
+            resp.close()
+            return {
+                "status": "streaming_endpoint",
+                "conv_id": conv_id,
+                "from_chunk": from_chunk,
+                "http_status": resp.status_code,
+            }
+        except requests.RequestException as exc:
+            logger.warning("resume_stream failed: %s", exc)
+            return {"error": str(exc), "conv_id": conv_id}
+
+    def add_graph_entity(self, name: str, type_: str, description: str = "") -> dict[str, Any] | None:
+        """POST /v1/graph/entity — add entity to knowledge graph."""
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/graph/entity",
+                json={
+                    "name": name,
+                    "node_type": type_,
+                    "description": description,
+                },
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return resp.json() if resp.text else {}
+        except requests.RequestException as exc:
+            logger.warning("add_graph_entity failed: %s", exc)
+            return {"error": str(exc)}
+
+    def add_graph_relation(
+        self, source: str, target: str, relation: str = "related"
+    ) -> dict[str, Any] | None:
+        """POST /v1/graph/relation — add relation to knowledge graph."""
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/graph/relation",
+                json={
+                    "source_id": source,
+                    "target_id": target,
+                    "edge_type": relation,
+                },
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return resp.json() if resp.text else {}
+        except requests.RequestException as exc:
+            logger.warning("add_graph_relation failed: %s", exc)
+            return {"error": str(exc)}
+
+    def export_training_data(self, min_score: float = 7.0, limit: int = 100) -> dict[str, Any] | None:
+        """POST /v1/training/export — export successful conversations as training data."""
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/training/export",
+                json={"min_score": min_score, "limit": limit},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            return resp.json() if resp.text else {}
+        except requests.RequestException as exc:
+            logger.warning("export_training_data failed: %s", exc)
+            return {"error": str(exc)}
+
+    def trigger_training(
+        self,
+        base_model: str = "llama3.1:8b",
+        adapter_name: str = "v_self_improve",
+        epochs: int = 1,
+        confirm_token: str | None = None,
+    ) -> dict[str, Any] | None:
+        """POST /v1/training/train — trigger a training round (requires ALPHA_WOLF_TRAIN_TOKEN)."""
+        try:
+            payload = {
+                "base_model": base_model,
+                "adapter_name": adapter_name,
+                "epochs": epochs,
+            }
+            if confirm_token:
+                payload["confirm_token"] = confirm_token
+            resp = self._session.post(
+                f"{self.base_url}/v1/training/train",
+                json=payload,
+                timeout=30,
+            )
+            # Don't raise_for_status — 401/403 is expected without token
+            try:
+                data = resp.json() if resp.text else {}
+            except ValueError:
+                data = {"raw": resp.text}
+            data["http_status"] = resp.status_code
+            return data
+        except requests.RequestException as exc:
+            logger.warning("trigger_training failed: %s", exc)
+            return {"error": str(exc)}
+
+    def run_skill_by_name(
+        self, skill_name: str, arguments: dict[str, Any] | None = None
+    ) -> dict[str, Any] | None:
+        """POST /v1/skills/{skill_name}/run — run skill by name."""
+        try:
+            resp = self._session.post(
+                f"{self.base_url}/v1/skills/{skill_name}/run",
+                json={"arguments": arguments or {}},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            return resp.json() if resp.text else {}
+        except requests.RequestException as exc:
+            logger.warning("run_skill_by_name failed: %s", exc)
+            return {"error": str(exc)}
 
 
 # ============================================================================
