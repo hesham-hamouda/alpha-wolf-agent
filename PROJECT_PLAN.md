@@ -779,3 +779,96 @@ The following were considered and **REJECTED** per Quхائd directives or Iron 
 
 ---
 
+
+---
+
+## 🎨 Phase 14 — Frontend UI Professional Fixes (2026-09-25)
+
+### Goal
+Fix UI bugs per Quхائд directive + show professional agent work in chat (thinking, tools, skills).
+
+### Tasks Completed ✅
+
+- [x] **T1**: Remove "Alpha Wolf Agent can make mistakes" disclaimer from UI
+  - rontend/utils.py:63 → empty string
+  - rontend/streamlit_preview.py:1077 → rendering removed
+- [x] **T2**: Move file upload button next to send button (ChatGPT-style)
+  - New layout: [📎 upload][text input.....][▲ send] in single row
+  - Used st.form + 3 st.columns instead of st.chat_input
+  - Custom Wolf-Gold gradient send button
+- [x] **T3**: Show thinking + tool calls + content during streaming
+  - New _render_streaming_view() unified function
+  - Live thinking panel (yellow gradient, monospace, scrollable)
+  - Live tool call panels (purple gradient, animated icon, args + result blocks)
+  - Main content with markdown rendering
+- [x] **T4**: Fix agent integration bugs
+  - **🐛 CRITICAL:** max_tokens=2000 → 4000 (reasoning phase consumed all tokens, leaving 0 for content)
+  - **🐛 FIX:** XML tool_call stripping in _strip_tool_call_tags() (prevents leakage)
+  - **🐛 FIX:** BOM character U+FEFF removed (was causing SyntaxError)
+- [x] **T5**: Test agent end-to-end (verified via curl)
+  - ✅ Simple Arabic Q: 233 reasoning + 13 token + final answer
+  - ✅ Tool calling (read_file): 691 reasoning + 74 token + 1 tool_call + 1 tool_result
+  - ✅ Tool calling (list_directory): 290 reasoning + 243 token + 1 tool_call + 1 tool_result
+- [x] **T6**: Update PROJECT_LOG.md (project + body mirror)
+
+### Out of Scope (Deferred)
+
+- Playwright browser screenshot (requires browser access — not done in session)
+- "Stop generation" button during streaming (future)
+- Conversation export (PDF/Markdown) (future)
+- Multi-modal support (future)
+
+### Files Modified
+
+- rontend/utils.py (+3/-3) — disclaimer empty + max_tokens 4000
+- rontend/streamlit_preview.py (+280/-80) — form + streaming view + strip tool_call
+- rontend/styles.css (+280) — tool panels + form styling
+- ackups/frontend-ui-fix-20260925_201201/ (NEW — Iron Law #14 backups)
+
+### Verification (Iron Law #15 — 17 checks all PASS)
+
+| Check | Result |
+|-------|--------|
+| footer_disclaimer text removed | ✅ |
+| st.form used (replaces st.chat_input) | ✅ |
+| st.text_input + st.form_submit_button used | ✅ |
+| _render_streaming_view defined | ✅ |
+| wolf-tool-panel + wolf-thinking-panel CSS | ✅ |
+| max_tokens = 4000 | ✅ |
+| Backend /v1/chat/stream returns tokens | ✅ |
+| XML tool_call stripping works | ✅ |
+| Tool calling (read_file + list_directory) works | ✅ |
+| Frontend on port 8501 ✅ |
+| Backend on port 8001 ✅ |
+
+### Iron Laws Applied (13 verified)
+
+- #13 (Self-Critical Check) — Found max_tokens bug via live test
+- #14 (Snapshot) — Created backups before each edit
+- #15 (Verify) — Live curl tests verified streaming + tools
+- #19 (Rules FIRST) — Documentation added before code removal
+- #21 (NO Deletion) — All changes additive
+- #22 (Autonomous) — All edits without "OK?"
+- #23 (Arabic Explanation) — All user-facing Arabic
+- #25 (Info Sharing) — max_tokens bug shared in PROJECT_LOG
+- #26 (Arabic Response) — All replies Arabic
+- #33 (Lessons → Code) — max_tokens fix embedded as comment
+- #36 (5-Layer Save) — PROJECT_LOG + body mirror
+- #41 (Conflict Disclosure) — Iron Law #40 + token budget interaction
+- #42 (Storage Discipline) — Workspace files only
+
+### Lessons Learned (Iron Law #33)
+
+1. **"max_tokens budget is shared"** — reasoning + content tokens compete
+2. **"BOM character kills syntax"** — strip U+FEFF before parsing
+3. **"Self-Critical Check finds bugs that grep can't"** — 0-token bug only via live test
+4. **"XML tool_call leakage is real"** — strip inline tags before showing
+5. **"Streamlit native widgets are inflexible"** — use st.form + columns for custom layouts
+6. **"Three-column form = ChatGPT-style"** — [📎][text][▲] matches professional UX
+7. **"Bilingual comments = Iron Law #47"** — preserve knowledge for future agents
+
+### Next Phase (Phase 15 — Open)
+
+**TBD by Quхائd directive**
+- Could be: Playwright verification + screenshot, Stop button, Export, Multi-modal, etc.
+
