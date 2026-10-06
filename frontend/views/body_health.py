@@ -163,7 +163,7 @@ def render() -> None:
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("**Model | النموذج:**")
-            model_name = summary.get("model", summary.get("name", "alpha-wolf-agent"))
+            model_name = summary.get("model", summary.get("name", "alpha-wolf-agent-v8"))  # FIX 2026-10-06
             st.code(str(model_name))
 
             if "version" in summary:
