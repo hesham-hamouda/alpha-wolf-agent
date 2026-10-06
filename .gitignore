@@ -139,4 +139,27 @@ secrets/
 # Temporary backups
 *.tmp
 *.bak
+*.bak-phase*
+*.bak.2026-*
 *~
+*.err
+*.err.log
+# Backend launch artifacts (backend_*.err, stream_chunks/)
+backend_*.err
+backend_*.log
+backend/stream_chunks/
+backend/rag_jobs.json
+backend/conversations.db
+backend/conversations.db-*
+# Body runtime artifacts
+body/memory/state.db-shm
+body/memory/state.db-wal
+body/knowledge_graph/chromadb/chroma.sqlite3
+body/knowledge_graph/chromadb/chroma.sqlite3-*
+body/knowledge_graph/networkx/graph.pickle
+# Root dev artifacts
+main_diff.txt
+frontend_home.html
+test.txt
+# OpenCode session artifacts (do NOT commit)
+.opencode/
