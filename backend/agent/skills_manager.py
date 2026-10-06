@@ -190,6 +190,18 @@ class SkillsManager:
         if "def run" not in source_text:
             return {"success": False, "error": "No `def run` found in source text"}
 
+        # FIX 2026-09-26 (Round 15): safety gate — block dangerous patterns.
+        # Previously install_from_text only checked for `def run` but did NOT run
+        # the safety gate, so malicious code (os.system, subprocess, etc.) could
+        # be installed as a skill via the /v1/skills/text endpoint.
+        try:
+            from backend.agent.tools import _skill_safety_check
+            violations = _skill_safety_check(source_text)
+            if violations:
+                return {"success": False, "error": f"Safety check failed: {', '.join(violations)}"}
+        except ImportError:
+            pass
+
         skills_dir = _skills_layer._skills_dir()
         target = skills_dir / f"{name}.py"
 

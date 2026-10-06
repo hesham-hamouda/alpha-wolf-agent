@@ -59,8 +59,8 @@ def _body_root() -> Path:
     local_body = project / "body"
     if local_body.exists():
         return local_body
-    # External body location (preferred)
-    external = Path(os.environ.get("ALPHA_WOLF_BODY", r"E:\Trained intelligence models\alpha-wolf"))
+    # External body location (configurable via env var)
+    external = Path(os.environ.get("ALPHA_WOLF_BODY", str(project / "body")))
     return external if external.exists() else local_body
 
 
@@ -200,6 +200,68 @@ class LiveContext:
 
         return summary
 
+    # ------------------------------------------------------------------
+    # Body inspection (self-visibility: the Wolf sees its own body)
+    # ------------------------------------------------------------------
+
+    def get_body_tree(self, max_depth: int = 3) -> Dict[str, Any]:
+        """Return the body folder tree + size stats (read-only).
+
+        يُرجع شجرة مجلد الجسد مع إحصاءات الحجم (قراءة فقط).
+        """
+        tree = self._walk_dir(self.body_root, max_depth=max_depth)
+        files = size_bytes = 0
+        try:
+            for p in self.body_root.rglob("*"):
+                if not p.is_file():
+                    continue
+                if any(ex in p.parts for ex in EXCLUDED_DIRS):
+                    continue
+                files += 1
+                try:
+                    size_bytes += p.stat().st_size
+                except OSError:
+                    pass
+        except OSError:
+            pass
+        return {
+            "body_root": str(self.body_root),
+            "tree": tree,
+            "stats": {
+                "tree_lines": len(tree),
+                "files": files,
+                "size_mb": round(size_bytes / (1024 * 1024), 2),
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+    def read_body_file(self, rel_path: str, max_chars: int = 32000) -> Dict[str, Any]:
+        """Read a text file inside the body folder (path-traversal guarded).
+
+        قراءة ملف نصي داخل مجلد الجسد (مع حماية من تجاوز المسار).
+        """
+        candidate = (self.body_root / rel_path)
+        try:
+            resolved = candidate.resolve()
+            if resolved != self.body_root and self.body_root not in resolved.parents:
+                return {"success": False, "path": rel_path, "error": "Path escapes body folder | المسار خارج الجسد"}
+        except (OSError, RuntimeError) as e:
+            return {"success": False, "path": rel_path, "error": f"Bad path: {e}"}
+        if not resolved.is_file():
+            return {"success": False, "path": rel_path, "error": "Not a file | ليس ملفاً"}
+        try:
+            content = resolved.read_text(encoding="utf-8", errors="ignore")
+        except OSError as e:
+            return {"success": False, "path": rel_path, "error": f"Read failed: {e}"}
+        truncated = len(content) > max_chars
+        return {
+            "success": True,
+            "path": str(resolved.relative_to(self.body_root)),
+            "chars": len(content),
+            "truncated": truncated,
+            "content": content[:max_chars],
+        }
+
     def _recent_files(self, recent_days: int = 7, limit: int = 30) -> List[Dict[str, Any]]:
         """List recently modified files (Iron Law #15 — actually scans disk).
 
@@ -321,6 +383,7 @@ class LiveContext:
         query: Optional[str] = None,
         max_depth: int = 2,
         search_top_k: int = 5,
+        max_chars: int = 4000,
     ) -> str:
         """Build a system prompt with LIVE project context injected.
 
@@ -330,6 +393,8 @@ class LiveContext:
             query: optional user query to also search for relevant files
             max_depth: tree depth (default 2 to keep prompt small)
             search_top_k: search results to include
+            max_chars: hard-cap on the returned context (default 4000 chars).
+                Without cap, Arabic queries can balloon to 10000+ chars and trigger 400.
 
         Returns:
             Markdown-formatted string for injection into system message
@@ -383,7 +448,12 @@ class LiveContext:
             "**ملاحظة:** هذه بيانات حية من القرص — تعكس الحالة الحالية دائماً.",
         ])
 
-        return "\n".join(sections)
+        result = "\n".join(sections)
+        if len(result) > max_chars:
+            truncated = result[:max_chars] + f"\n\n[... truncated at {max_chars} chars for context budget]"
+            logger.info(f"[LiveContext] truncated context from {len(result)} to {max_chars} chars")
+            return truncated
+        return result
 
 
 # ============================================================================

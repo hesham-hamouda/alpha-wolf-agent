@@ -29,6 +29,7 @@ import re
 import sys
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -165,7 +166,9 @@ def _load_skill_from_file(skill_path: Path) -> Optional[SkillMetadata]:
             version=meta.get("version", "0.1.0"),
             parameters=meta.get("parameters", {}),
             path=str(skill_path),
-            installed_at=skill_path.stat().st_mtime.__class__.__name__ and "",  # placeholder
+            installed_at=datetime.fromtimestamp(
+                skill_path.stat().st_mtime, tz=timezone.utc
+            ).isoformat(),
         )
     except Exception as e:
         logger.error(f"Failed to load skill metadata from {skill_path}: {e}")

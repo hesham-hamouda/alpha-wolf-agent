@@ -33,10 +33,10 @@ import subprocess
 import sys
 import tempfile
 import uuid
-from dataclasses import dataclass, asdict, field
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("alpha_wolf.code_exec")
 
@@ -308,7 +308,6 @@ def execute_python(
     }
 
     try:
-        start_time = time.time() if 'time' in dir() else None
         import time as _time
         start_time = _time.time()
 
@@ -319,8 +318,8 @@ def execute_python(
             capture_output=True,
             text=True,
             timeout=timeout_sec,
-            check=False,  # don't raise on non-zero exit
-            shell=False,  # no shell injection
+            check=False,
+            shell=False,
         )
 
         elapsed = _time.time() - start_time

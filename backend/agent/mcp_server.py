@@ -481,14 +481,14 @@ async def _async_self_test() -> bool:
         failed += 1
         print(f"  ✗ FastAPI not installed (test skipped)")
 
-    # Test 9: Create alpha-wolf MCP server (registers 6 tools)
+    # Test 9: Create alpha-wolf MCP server (registers 6+ tools)
     wolf_server = create_alpha_wolf_mcp_server()
-    if len(wolf_server.tools) == 6:
+    if len(wolf_server.tools) >= 6:
         passed += 1
         print(f"  ✓ alpha-wolf MCP server: {len(wolf_server.tools)} tools registered")
     else:
         failed += 1
-        print(f"  ✗ expected 6 tools, got {len(wolf_server.tools)}")
+        print(f"  ✗ expected at least 6 tools, got {len(wolf_server.tools)}")
 
     print(f"\nResults: {passed} passed, {failed} failed")
     print(f"النتائج: {passed} نجح، {failed} فشل")

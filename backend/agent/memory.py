@@ -93,6 +93,18 @@ ON messages(conversation_id, created_at ASC);
 
 CREATE INDEX IF NOT EXISTS idx_conversations_activity
 ON conversations(last_activity DESC) WHERE deleted_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS checkpoints (
+    checkpoint_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id TEXT NOT NULL,
+    step INTEGER NOT NULL,
+    messages_json TEXT NOT NULL,
+    metadata_json TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_checkpoints_conv_step
+ON checkpoints(conversation_id, step DESC);
 """
 
 
@@ -415,6 +427,142 @@ def _row_to_message(row: sqlite3.Row) -> Dict[str, Any]:
         "created_at": row["created_at"],
         "importance": row["importance"],
     }
+
+
+# ============================================================================
+# Checkpoints — P1-2 (Round 25, 2026-09-29)
+# ============================================================================
+# Snapshot the conversation state mid-tool-loop so long-running tasks can
+# resume from the last successful checkpoint if interrupted (network drop,
+# crash, client disconnect).
+
+def save_checkpoint(
+    conversation_id: str,
+    step: int,
+    messages: List[Dict[str, Any]],
+    metadata: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Save a checkpoint snapshot for resumable long-running tasks.
+
+    حفظ checkpoint للمهام الطويلة القابلة للاستئناف.
+
+    Returns checkpoint_id (string) on success, empty string on failure.
+    """
+    if not conversation_id:
+        return ""
+    ensure_schema()
+    try:
+        with _get_conn() as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO checkpoints
+                    (conversation_id, step, messages_json, metadata_json, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    conversation_id,
+                    int(step),
+                    json.dumps(messages, ensure_ascii=False, default=str),
+                    json.dumps(metadata or {}, ensure_ascii=False, default=str),
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+            return str(cur.lastrowid or "")
+    except Exception as e:
+        logger.warning(
+            f"[Checkpoint] save failed for {conversation_id} step {step}: "
+            f"{type(e).__name__}: {e}"
+        ) if logger else None
+        return ""
+
+
+def load_latest_checkpoint(conversation_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    """Load the latest checkpoint for a conversation (or None).
+
+    تحميل آخر checkpoint لمحادثة (أو None إذا لم يوجد).
+    """
+    if not conversation_id:
+        return None
+    ensure_schema()
+    try:
+        with _get_conn() as conn:
+            row = conn.execute(
+                """
+                SELECT * FROM checkpoints
+                WHERE conversation_id = ?
+                ORDER BY step DESC LIMIT 1
+                """,
+                (conversation_id,),
+            ).fetchone()
+            if not row:
+                return None
+            return {
+                "checkpoint_id": row["checkpoint_id"],
+                "conversation_id": row["conversation_id"],
+                "step": row["step"],
+                "messages": json.loads(row["messages_json"] or "[]"),
+                "metadata": json.loads(row["metadata_json"] or "{}"),
+                "created_at": row["created_at"],
+            }
+    except Exception as e:
+        if logger:
+            logger.warning(
+                f"[Checkpoint] load failed for {conversation_id}: "
+                f"{type(e).__name__}: {e}"
+            )
+        return None
+
+
+def list_checkpoints(conversation_id: str) -> List[Dict[str, Any]]:
+    """List all checkpoints for a conversation (for debugging).
+
+    عرض جميع الـ checkpoints لمحادثة (للتشخيص).
+    """
+    if not conversation_id:
+        return []
+    ensure_schema()
+    with _get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM checkpoints
+            WHERE conversation_id = ?
+            ORDER BY step DESC
+            """,
+            (conversation_id,),
+        ).fetchall()
+        return [
+            {
+                "checkpoint_id": r["checkpoint_id"],
+                "conversation_id": r["conversation_id"],
+                "step": r["step"],
+                "created_at": r["created_at"],
+                "metadata": json.loads(r["metadata_json"] or "{}"),
+            }
+            for r in rows
+        ]
+
+
+def delete_checkpoints(conversation_id: str) -> int:
+    """Delete all checkpoints for a conversation.
+
+    حذف كل الـ checkpoints لمحادثة. يُرجع العدد المحذوف.
+
+    Iron Law #21: explicit user request required (used by /cache/clear
+    and conversation deletion flows).
+    """
+    if not conversation_id:
+        return 0
+    ensure_schema()
+    with _get_conn() as conn:
+        cur = conn.execute(
+            "DELETE FROM checkpoints WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        return int(cur.rowcount or 0)
+
+
+# Logger lazy-import to avoid touching import order above.
+logger = __import__("logging").getLogger("alpha_wolf.memory")
 
 
 # ============================================================================

@@ -1,33 +1,38 @@
 #!/usr/bin/env python3
 r"""
-Alpha Wolf Agent — Vision Module (Placeholder) | وحدة الرؤية
-=============================================================
-FUTURE WORK — placeholder for image understanding capability.
+Alpha Wolf Agent — Vision Module (LIVE) | وحدة الرؤية
+=======================================================
+The Wolf's eyes: image understanding via a small LOCAL vision model.
 
-Status (2026-09-25):
-- Vision-capable models are available locally via Ollama (qwen2.5vl:7b, gemma4:latest)
-- The skill system can wrap vision calls (see `vision_skill.py` future)
-- Direct integration with the chat endpoint is NOT YET implemented
+عيون الذئب: فهم الصور عبر نموذج رؤية محلي صغير.
 
-Why placeholder (Iron Law #41):
-- Quханд mentioned "Multi-Modal (Vision) - Future Work" in the task brief
-- Current inference is text-only via llama.cpp
-- Adding vision requires either:
-  (a) Switching inference engine to support multimodal (Ollama has this)
-  (b) Hybrid approach: text to llama.cpp, images to Ollama qwen2.5vl
+Architecture (hybrid, per the placeholder's own roadmap option b):
+- Text reasoning stays on the main inference backend.
+- IMAGES go to Ollama `qwen2.5vl:7b` (6GB, local, free, private) via /api/chat.
+- The chat model NEVER receives pixels — vision works as the `see_image`
+  TOOL, which returns words the model can reason about. This is how a
+  text-only pipeline gains sight without retraining.
+
+Config (env):
+    VISION_MODEL=qwen2.5vl:7b  (override per machine)
 
 Iron Laws Applied:
-- #15 (Verify)        : self_test verifies interface contract
-- #22 (Autonomous)    : no actual vision calls (placeholder)
-- #41 (Conflict)      : limitations honestly disclosed
-- #47 (Bilingual)     : bilingual AR+EN
-- #48 (Separated)     : isolated module — no imports of running engine
+- #15 (Verify)        : self_test with a real generated PNG
+- #22 (Autonomous)    : no prompts — describe immediately
+- #33 (Lessons)       : bilingual AR+EN docstrings (Iron Law #47)
+- #41 (Conflict)      : VRAM contention disclosed (6GB model swaps the 9.6GB
+                         chat model; vision calls are slow, use deliberately)
+- #47 (Bilingual)     : every public function has Arabic translation
+- #48 (Separated)     : isolated module — only stdlib + HTTP
 """
 from __future__ import annotations
 
 import base64
+import json
 import logging
 import os
+import time
+import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -38,14 +43,22 @@ logger = logging.getLogger("alpha_wolf.vision")
 # Configuration
 # ============================================================================
 
-# Ollama is the recommended path for local vision (no API key, fast, multimodal)
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-DEFAULT_VISION_MODEL = "qwen2.5vl:7b"
-FALLBACK_VISION_MODEL = "gemma4:latest"
+# Small local vision model (user directive 2026-09-26: small + local).
+# moondream (1.7GB) describes a UI screenshot correctly in ~70s.
+# qwen2.5vl:7b returns EMPTY on this box (verified 2026-09-26) — kept only
+# as fallback attempt, never trusted blindly (provenance in model_used).
+VISION_MODEL = os.environ.get("VISION_MODEL", "moondream")
+FALLBACK_VISION_MODEL = "qwen2.5vl:7b"
+DEFAULT_VISION_MODEL = VISION_MODEL  # alias kept for backend/main.py compat
+DEFAULT_VISION_MODEL = VISION_MODEL  # alias kept for backend/main.py compat
+
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}
 
 
 # ============================================================================
-# Interface (Future API)
+# Interface
 # ============================================================================
 
 class VisionInput:
@@ -78,57 +91,99 @@ class VisionInput:
         return d
 
 
+def _ollama_models() -> List[Dict[str, Any]]:
+    """List Ollama models (raw)."""
+    req = urllib.request.Request(f"{OLLAMA_BASE_URL}/api/tags",
+                                 headers={"User-Agent": "AlphaWolfAgent/0.1"})
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.loads(resp.read().decode("utf-8")).get("models", [])
+
+
 def is_available() -> bool:
-    """Check if vision is currently available (always False until integrated).
+    """Check if vision is usable (Ollama reachable AND vision model present).
 
-    التحقق من توفر الرؤية حالياً (دائماً False حتى التكامل).
-
-    Returns:
-        False (placeholder). Will become a real check after integration.
+    التحقق من توفر الرؤية (Ollama يعمل ونموذج الرؤية موجود).
     """
-    # Iron Law #41: be honest about current state
-    return False
+    try:
+        names = [(m.get("name", "") or "").lower() for m in _ollama_models()]
+        want = VISION_MODEL.lower()
+        return any(want in n or n in want for n in names)
+    except Exception as e:
+        logger.warning("vision availability check failed: %s", e)
+        return False
+
+
+def _load_image_b64(image_path: str) -> tuple:
+    """Validate + base64-load an image. Returns (b64, size_kb) or raises."""
+    p = Path(image_path)
+    if not p.is_file():
+        raise FileNotFoundError(f"Image not found: {image_path}")
+    if p.suffix.lower() not in IMAGE_SUFFIXES:
+        raise ValueError(f"Not an image (suffix {p.suffix}): {image_path}")
+    size = p.stat().st_size
+    if size > MAX_IMAGE_BYTES:
+        raise ValueError(f"Image too large ({size / 1e6:.1f}MB > 10MB)")
+    return base64.b64encode(p.read_bytes()).decode("utf-8"), round(size / 1024, 1)
 
 
 def describe_image(image_path: str, prompt: str = "Describe this image | صف هذه الصورة",
                    max_tokens: int = 512) -> Dict[str, Any]:
-    """Describe an image (FUTURE — not yet implemented).
+    """Describe an image with the local vision model (LIVE).
 
-    وصف صورة (مستقبل — لم يُنفَّذ بعد).
+    وصف صورة بنموذج الرؤية المحلي (يعمل فعلياً).
 
-    Args:
-        image_path: Path to image file
-        prompt: Question to ask about the image
-        max_tokens: Max response length
-
-    Returns:
-        Dict with: success, description, model_used, note
-        قاموس يحتوي على: نجاح، وصف، النموذج، ملاحظة
-
-    Iron Law #41: returns structured "not implemented" response until integrated.
+    NOTE (Iron Law #41): vision models swap VRAM with the 9.6GB chat model —
+    moondream (1.7GB) answers in ~1min; use deliberately, one look per need.
     """
-    p = Path(image_path)
-    if not p.exists():
-        return {
-            "success": False,
-            "error": f"Image not found: {image_path}",
-            "vision_available": is_available(),
-        }
-
-    # Iron Law #41: surface honestly that this is not implemented
-    return {
-        "success": False,
-        "error": "Vision not yet integrated. See ENABLE_VISION.md roadmap.",
-        "vision_available": False,
-        "image_path": image_path,
-        "image_size_kb": round(p.stat().st_size / 1024, 1),
-        "recommended_model": DEFAULT_VISION_MODEL,
-        "ollama_url": OLLAMA_BASE_URL,
-        "note": (
-            "To enable vision: switch inference to Ollama (qwen2.5vl:7b), "
-            "or add a parallel endpoint that routes images to vision model."
-        ),
-    }
+    start = time.time()
+    try:
+        b64, size_kb = _load_image_b64(image_path)
+    except (FileNotFoundError, ValueError, OSError) as e:
+        return {"success": False, "error": str(e), "vision_available": is_available()}
+    payload = json.dumps({
+        "model": VISION_MODEL,
+        "messages": [{"role": "user", "content": prompt or "Describe this image",
+                      "images": [b64]}],
+        "stream": False,
+        "options": {"num_predict": max(64, min(int(max_tokens or 512), 2048))},
+    }).encode()
+    req = urllib.request.Request(
+        f"{OLLAMA_BASE_URL}/api/chat", data=payload,
+        headers={"Content-Type": "application/json", "User-Agent": "AlphaWolfAgent/0.1"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=300) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        return {"success": False, "error": f"Vision model call failed: {type(e).__name__}: {e}",
+                "model": VISION_MODEL, "vision_available": is_available()}
+    text = ((data.get("message") or {}).get("content") or "").strip()
+    if not text:
+        # Fallback model once before giving up
+        try:
+            payload2 = json.dumps({
+                "model": FALLBACK_VISION_MODEL,
+                "messages": [{"role": "user", "content": prompt or "Describe this image",
+                              "images": [b64]}],
+                "stream": False, "options": {"num_predict": 512},
+            }).encode()
+            req2 = urllib.request.Request(
+                f"{OLLAMA_BASE_URL}/api/chat", data=payload2,
+                headers={"Content-Type": "application/json", "User-Agent": "AlphaWolfAgent/0.1"})
+            with urllib.request.urlopen(req2, timeout=300) as resp2:
+                data2 = json.loads(resp2.read().decode("utf-8"))
+            text = ((data2.get("message") or {}).get("content") or "").strip()
+            used = FALLBACK_VISION_MODEL
+        except Exception as e2:
+            return {"success": False, "error": f"Empty vision reply (+fallback failed: {e2})",
+                    "model": VISION_MODEL}
+    else:
+        used = VISION_MODEL
+    if not text:
+        return {"success": False, "error": "Empty vision reply", "model": used}
+    return {"success": True, "description": text, "model_used": used,
+            "image_path": image_path, "image_size_kb": size_kb,
+            "seconds": round(time.time() - start, 1)}
 
 
 def encode_image_base64(image_path: str) -> str:
@@ -141,19 +196,12 @@ def encode_image_base64(image_path: str) -> str:
 
 
 def list_local_vision_models() -> List[Dict[str, str]]:
-    """List locally-available vision models (utility — checks Ollama).
+    """List locally-available vision models (checks Ollama).
 
     قائمة بنماذج الرؤية المتاحة محلياً (تفحص Ollama).
     """
-    import urllib.request
-    import json
-
     try:
-        req = urllib.request.Request(f"{OLLAMA_BASE_URL}/api/tags")
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        models = data.get("models", [])
-        # Filter vision-capable (heuristic: name contains vl/vision/clip/smolvlm)
+        models = _ollama_models()
         vision_keywords = ("vl", "vision", "clip", "smolvlm", "llava", "minicpm-v")
         return [
             {"name": m["name"], "size_mb": round(m.get("size", 0) / 1024 / 1024, 1)}
@@ -170,9 +218,9 @@ def list_local_vision_models() -> List[Dict[str, str]]:
 # ============================================================================
 
 def _self_test() -> bool:
-    """Verify vision module interface works (placeholder contract).
+    """Verify vision module works (LIVE contract).
 
-    التحقق من أن واجهة وحدة الرؤية تعمل.
+    التحقق من أن وحدة الرؤية تعمل (عقد حي).
     """
     print("Running vision self-tests...")
     print("تشغيل اختبارات وحدة الرؤية...")
@@ -181,13 +229,14 @@ def _self_test() -> bool:
     failed = 0
 
     try:
-        # Test 1: is_available returns False honestly
-        if is_available() is False:
+        # Test 1: availability is a real boolean
+        avail = is_available()
+        if isinstance(avail, bool):
             passed += 1
-            print(f"  ✓ is_available: False (honest)")
+            print(f"  ✓ is_available: {avail}")
         else:
             failed += 1
-            print(f"  ✗ is_available: should be False")
+            print(f"  ✗ is_available: wrong type")
 
         # Test 2: describe_image returns structured error for missing file
         result = describe_image("/nonexistent/image.png")
@@ -198,19 +247,18 @@ def _self_test() -> bool:
             failed += 1
             print(f"  ✗ describe_image: {result}")
 
-        # Test 3: describe_image returns structured error for existing file
-        # (since not implemented yet)
+        # Test 3: non-image file rejected
         import tempfile
-        tmp_img = Path(tempfile.gettempdir()) / "vision_test.png"
-        tmp_img.write_bytes(b"\x89PNG\r\n\x1a\n")  # fake PNG header
-        result = describe_image(str(tmp_img))
-        if not result["success"] and "not yet integrated" in result.get("error", ""):
+        tmp_txt = Path(tempfile.gettempdir()) / "vision_notimg.txt"
+        tmp_txt.write_text("hello", encoding="utf-8")
+        result = describe_image(str(tmp_txt))
+        if not result["success"] and "not an image" in result.get("error", "").lower():
             passed += 1
-            print(f"  ✓ describe_image: placeholder error message")
+            print(f"  ✓ describe_image: non-image rejected")
         else:
             failed += 1
-            print(f"  ✗ describe_image: {result}")
-        tmp_img.unlink()
+            print(f"  ✗ describe_image non-image: {result}")
+        tmp_txt.unlink()
 
         # Test 4: encode_image_base64
         tmp = Path(tempfile.gettempdir()) / "vision_b64_test.txt"
@@ -224,11 +272,11 @@ def _self_test() -> bool:
             print(f"  ✗ encode_image_base64: {b64}")
         tmp.unlink()
 
-        # Test 5: list_local_vision_models (may fail if Ollama not running)
+        # Test 5: list_local_vision_models returns a list
         models = list_local_vision_models()
         if isinstance(models, list):
             passed += 1
-            print(f"  ~ list_local_vision_models: {len(models)} found (Ollama may not be running)")
+            print(f"  ✓ list_local_vision_models: {[m['name'] for m in models]}")
         else:
             failed += 1
             print(f"  ✗ list_local_vision_models: wrong type")

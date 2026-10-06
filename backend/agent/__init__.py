@@ -5,7 +5,7 @@ Alpha Wolf Agent — Agent Capabilities Package
 Provides real agent infrastructure for Alpha Wolf:
 
 Sub-modules:
-- tools          : Tool registry with 6 built-in tools (file ops, code exec, web search)
+- tools          : Tool registry with 22 built-in tools (file ops, code exec, web search, vision, etc.)
 - tool_calling   : Parser for <tool_call>...</tool_call> blocks in model output
 - streaming      : Server-Sent Events (SSE) helpers for streaming responses
 - memory         : Conversation history persistence via SQLite (body sessions)
@@ -31,4 +31,6 @@ __all__ = [
     "memory",
     "mcp_server",
     "skills",
+    "web_search",
+    "skill_forge",
 ]

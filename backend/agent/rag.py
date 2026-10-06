@@ -122,18 +122,31 @@ def embed_text(text: str, model: str = EMBEDDING_MODEL, url: str = OLLAMA_URL) -
         return None
 
 
-def ollama_healthy(url: str = OLLAMA_URL) -> bool:
-    """Check if Ollama is reachable.
+# Heartbeat cache (url -> (timestamp, ok)) — see ollama_healthy().
+_OLLAMA_HEALTH_CACHE: Dict[str, tuple] = {}
 
-    فحص اتصال Ollama.
+
+def ollama_healthy(url: str = OLLAMA_URL) -> bool:
+    """Check if Ollama is reachable (result cached 30s).
+
+    فحص اتصال Ollama (مخزن مؤقتاً 30 ثانية).
+
+    FIX 2026-09-26: uncached heartbeats from stats()/gaps()/query piled up
+    during slow Ollama swaps and stalled the whole backend.
     """
+    now = time.time()
+    cached = _OLLAMA_HEALTH_CACHE.get(url)
+    if cached and (now - cached[0]) < 30:
+        return cached[1]
     try:
         import httpx
         with httpx.Client(timeout=5) as client:
             resp = client.get(f"{url}/api/tags")
-            return resp.status_code == 200
+            ok = resp.status_code == 200
     except Exception:
-        return False
+        ok = False
+    _OLLAMA_HEALTH_CACHE[url] = (now, ok)
+    return ok
 
 
 # ============================================================================
@@ -233,7 +246,14 @@ class LiveRAG:
 
         فهرسة ملف واحد.
 
-        Returns number of chunks added.
+        Large files: index the head (first MAX_CHUNKS_PER_FILE chunks)
+        instead of skipping — previously PROJECT_LOG.md / PROJECT_PLAN.md
+        (>25k chars) were silently excluded from the agent's memory
+        (FIX 2026-09-26).
+        Stale chunks: re-embed when chunk content hash changed, so edits
+        are picked up without force=True (FIX 2026-09-26).
+
+        Returns number of chunks added/updated.
         """
         if not file_path.exists() or not file_path.is_file():
             return 0
@@ -243,10 +263,14 @@ class LiveRAG:
         except (OSError, UnicodeDecodeError):
             return 0
 
-        # Skip too-large files
-        if len(text) > CHUNK_SIZE * MAX_CHUNKS_PER_FILE:
-            logger.info("Skipping large file %s (%d chars)", file_path, len(text))
-            return 0
+        # Head-truncate huge files instead of skipping them
+        limit = CHUNK_SIZE * MAX_CHUNKS_PER_FILE
+        if len(text) > limit:
+            logger.info(
+                "Truncating large file %s (%d chars -> %d) for index",
+                file_path, len(text), limit,
+            )
+            text = text[:limit]
 
         chunks = chunk_text(text)
         if not chunks:
@@ -257,13 +281,17 @@ class LiveRAG:
 
         for i, chunk in enumerate(chunks):
             cid = _chunk_id(rel_path, i)
+            chash = hashlib.sha1(chunk.encode("utf-8", errors="ignore")).hexdigest()[:12]
 
-            # Skip if already indexed (unless force)
+            # Skip if already indexed with identical content (unless force)
             if not force and self.collection is not None:
                 try:
                     existing = self.collection.get(ids=[cid])
                     if existing and existing.get("ids"):
-                        continue  # already indexed
+                        old_meta = (existing.get("metadatas") or [{}])[0] or {}
+                        if old_meta.get("hash") == chash:
+                            continue  # unchanged
+                        # Content changed -> refresh embedding below, upsert after
                 except Exception:
                     pass
 
@@ -275,15 +303,15 @@ class LiveRAG:
             # Store
             if self.collection is not None:
                 try:
-                    self.collection.add(
+                    self.collection.upsert(
                         ids=[cid],
                         documents=[chunk],
                         embeddings=[embedding],
-                        metadatas=[{"source": rel_path, "chunk_index": i}],
+                        metadatas=[{"source": rel_path, "chunk_index": i, "hash": chash}],
                     )
                     added += 1
                 except Exception as e:
-                    logger.warning("ChromaDB add failed: %s", e)
+                    logger.warning("ChromaDB upsert failed: %s", e)
             else:
                 # In-memory fallback
                 self._memory_store.append({
@@ -315,15 +343,63 @@ class LiveRAG:
                 if not path.is_file():
                     continue
                 # Skip noisy dirs (mirror live_context exclusions)
+                # FIX 2026-09-26 (user-observed): unsloth_compiled_cache *.py
+                # (172 junk chunks of generated GPU code) polluted retrieval
+                # and stalled indexing. Round 2: screenshots (binary + json
+                # reports), logs (ever-growing), volatile job ledger.
                 if any(excluded in path.parts for excluded in {
                     "node_modules", ".git", "__pycache__", ".venv", "venv",
                     "backups", "dist", "build", ".cache",
+                    "unsloth_compiled_cache", "knowledge_graph",
+                    "screenshots", "logs",
                 }):
+                    continue
+                if path.name == "rag_jobs.json":
+                    continue
+                # Skip binary/database files even if pattern-matched
+                if path.suffix.lower() in {
+                    ".db", ".sqlite3", ".sqlite", ".wal", ".shm", ".bin",
+                    ".pkl", ".gguf", ".safetensors", ".onnx", ".pt", ".pth",
+                }:
                     continue
                 added = self.index_file(path, force=force)
                 count += added
             stats[pattern] = count
         return stats
+
+    def purge_junk_sources(self) -> Dict[str, int]:
+        """Delete chunks whose source is generated/binary noise.
+
+        حذف المقاطع القادمة من ملفات مولدة/ثنائية (تلوث مثبت حياً).
+        Returns {source: deleted_count}.
+        """
+        removed: Dict[str, int] = {}
+        if self.collection is None:
+            return removed
+        try:
+            got = self.collection.get(include=["metadatas"], limit=100000)
+        except Exception as e:
+            logger.warning("purge scan failed: %s", e)
+            return removed
+        by_source: Dict[str, list] = {}
+        for cid, meta in zip(got.get("ids", []), got.get("metadatas", [])):
+            by_source.setdefault((meta or {}).get("source", ""), []).append(cid)
+        junk_suffixes = (".db", ".sqlite3", ".sqlite", ".wal", ".shm", ".bin",
+                         ".pkl", ".gguf", ".safetensors", ".onnx", ".pt", ".pth")
+        junk_dirs = ("unsloth_compiled_cache", "knowledge_graph", "__pycache__",
+                     "screenshots", "logs")
+        junk_files = {"rag_jobs.json"}
+        for src, ids in by_source.items():
+            low = (src or "").lower().replace("/", "\\")
+            base = low.rsplit("\\", 1)[-1]
+            if (low.endswith(junk_suffixes) or any(d in low for d in junk_dirs)
+                    or base in junk_files):
+                try:
+                    self.collection.delete(ids=ids)
+                    removed[src] = len(ids)
+                except Exception as e:
+                    logger.warning("purge delete failed for %s: %s", src, e)
+        return removed
 
     # ------------------------------------------------------------------
     # Querying
@@ -462,11 +538,13 @@ def get_rag() -> LiveRAG:
     return _default_rag
 
 
-def build_rag_context(query_text: str, top_k: int = TOP_K_DEFAULT) -> str:
+def build_rag_context(query_text: str, top_k: int = TOP_K_DEFAULT, max_total_chars: int = 4000) -> str:
     """Build a RAG-augmented context block for chat.
 
     يبني سياق RAG محسّن للدردشة.
 
+    max_total_chars caps total injection (default 4000 chars ≈ 1500 Arabic tokens).
+    Without this cap, RAG can blow past the served context (16384 tokens).
     Returns empty string if no results.
     """
     rag = get_rag()
@@ -481,10 +559,18 @@ def build_rag_context(query_text: str, top_k: int = TOP_K_DEFAULT) -> str:
         "",
     ]
 
+    total_chars = sum(len(s) for s in sections)
     for i, chunk in enumerate(result.chunks, 1):
+        # Per-chunk budget: proportional to remaining budget
+        remaining = max(0, max_total_chars - total_chars)
+        if remaining < 200:  # not worth a new chunk
+            break
+        per_chunk = min(600, remaining - 100)  # leave 100 for headers
+        chunk_text = chunk.text[:per_chunk]
         sections.append(
-            f"### [{i}] `{chunk.source}` (similarity={chunk.similarity:.3f}):\n{chunk.text[:600]}"
+            f"### [{i}] `{chunk.source}` (similarity={chunk.similarity:.3f}):\n{chunk_text}"
         )
+        total_chars += len(chunk_text) + 100  # rough estimate
 
     if not result.ollama_ok:
         sections.append("\n_Note: Ollama embedding unavailable — RAG returned empty._")
