@@ -309,7 +309,7 @@ After P0 + critical P1 done:
 
 - **[SCHEMA.md](SCHEMA.md)** — What we have
 - **[README.md](README.md)** — How to use what we have
-- **[DATA_MINDMAP.html](../DATA_MINDMAP.html)** — Visual architecture
+- **[DATA_MINDMAP.html](../docs/DATA_MINDMAP.html)** — Visual architecture
 - **[PROJECT_PLAN.md](../PROJECT_PLAN.md)** — Master timeline
 - **[PROJECT_LOG.md](../PROJECT_LOG.md)** — Change log
 

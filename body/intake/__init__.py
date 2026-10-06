@@ -3,7 +3,6 @@ r"""Alpha Wolf Agent — Intake Module (Format Detection + Ingestion).
 Modules:
     format_detector.py   — Auto-detect dataset format + schema + quality
     ingestion_pipeline.py — Full ingestion (detect → quality → embed → index)
-    auto_learn.py        — Continuous learning (P2 — future work)
 
 Iron Laws Applied:
 - #7  (Anti-Contamination)  — blacklist enforced in format_detector.quarantine_check

@@ -341,7 +341,7 @@ print(f'Nodes: {g.number_of_nodes()}, Edges: {g.number_of_edges()}')
 
 - **[SCHEMA.md](SCHEMA.md)** — Detailed schema documentation
 - **[GAPS_AND_PRIORITIES.md](GAPS_AND_PRIORITIES.md)** — Critical gaps + priorities
-- **[../DATA_MINDMAP.html](../DATA_MINDMAP.html)** — Visual architecture map
+- **[../docs/DATA_MINDMAP.html](../docs/DATA_MINDMAP.html)** — Visual architecture map
 - **[../PROJECT_PLAN.md](../PROJECT_PLAN.md)** — Project master plan
 - **[../PROJECT_LOG.md](../PROJECT_LOG.md)** — Change log
 

@@ -8,7 +8,7 @@ This file is the **canonical reference** for Alpha Wolf Agent's body infrastruct
 - **HOW** it connects (the relationships)
 - **WHEN** to use each method (the use cases)
 
-For operators: see [README.md](README.md) | For gaps: see [GAPS_AND_PRIORITIES.md](GAPS_AND_PRIORITIES.md) | For mind map: see [DATA_MINDMAP.html](../DATA_MINDMAP.html)
+For operators: see [README.md](README.md) | For gaps: see [GAPS_AND_PRIORITIES.md](GAPS_AND_PRIORITIES.md) | For mind map: see [DATA_MINDMAP.html](../docs/DATA_MINDMAP.html)
 
 ---
 
