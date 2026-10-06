@@ -1,6 +1,6 @@
 """
-Name: web_search_skill
-Description: <!DOCTYPE html><html data-dpl-id="dpl_JA5v6kGZmkkSzqEBDLvfojtucUwi" lang="en" class="dark fira_mono_f2cab34b-module__lnvfWW__className"><head><meta ch
+Name: playwright_cli
+Description: Browser Automation with playwright-cli
 Description_AR: مهارة مكيفة من مصدر خارجي للذئب ألفا
 Author: Alpha Wolf skill-forge
 Version: 1.0.0
@@ -8,8 +8,8 @@ Parameters: {"task": "string"}
 """
 from pathlib import Path as _Path
 
-WOLF_PACK_DIR = 'E:\\Projects and systems managed by the team of experts\\Alpha Wolf Agent\\backend\\skills\\web_search_skill_pack'
-WOLF_SOURCE_URL = 'https://www.skills.sh/'
+WOLF_PACK_DIR = str(_Path(__file__).resolve().parent / "playwright_cli_pack")
+WOLF_SOURCE_URL = 'https://www.skills.sh/microsoft/playwright/playwright-cli'
 
 
 def _playbook():

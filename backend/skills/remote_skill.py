@@ -1,6 +1,6 @@
 """
-Name: web_search_skill
-Description: <!DOCTYPE html><html data-dpl-id="dpl_JA5v6kGZmkkSzqEBDLvfojtucUwi" lang="en" class="dark fira_mono_f2cab34b-module__lnvfWW__className"><head><meta ch
+Name: remote_skill
+Description: <!DOCTYPE html><html data-dpl-id="dpl_6SAKcGLLEGwcihf7rCQGgWs5x8eG" lang="en" class="dark fira_mono_f2cab34b-module__lnvfWW__className"><head><meta ch
 Description_AR: مهارة مكيفة من مصدر خارجي للذئب ألفا
 Author: Alpha Wolf skill-forge
 Version: 1.0.0
@@ -8,7 +8,7 @@ Parameters: {"task": "string"}
 """
 from pathlib import Path as _Path
 
-WOLF_PACK_DIR = 'E:\\Projects and systems managed by the team of experts\\Alpha Wolf Agent\\backend\\skills\\web_search_skill_pack'
+WOLF_PACK_DIR = 'E:\\Projects and systems managed by the team of experts\\Alpha Wolf Agent\\backend\\skills\\remote_skill_pack'
 WOLF_SOURCE_URL = 'https://www.skills.sh/'
 
 

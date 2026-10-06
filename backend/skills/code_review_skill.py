@@ -164,7 +164,7 @@ def _model_review(code: str, focus: str, backend_url: str) -> Optional[str]:
         resp = httpx.post(
             f"{backend_url}/v1/chat/completions",
             json={
-                "model": "alpha-wolf-agent",
+                "model": "alpha-wolf-agent-v8",  # FIX 2026-10-06: original broken
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.3,
                 "max_tokens": 800,
