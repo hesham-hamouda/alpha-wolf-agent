@@ -1,6 +1,17 @@
 # 🚨 GAPS_AND_PRIORITIES.md — Alpha Wolf Agent
 
-> **Iron Law #20 (Self-Awareness + Gap Priority)** | **Iron Law #33 (Lessons → Code)** | Last update: 2026-09-25
+> **Iron Law #20 (Self-Awareness + Gap Priority)** | **Iron Law #33 (Lessons → Code)** | Last update: 2026-10-13
+
+## 📍 Status 2026-10-13 — عصر الموجه التلقائي (أحدث أولاً، القديم أدناه للتاريخ)
+
+**مغلق:** قائمة 58 نموذجاً + 21 قسماً + 39 مهارة + بديل/رؤية/تقطير تلقائي + ComfyUI حي + أدلة حية (منارة، صوت مطابق، بروتين 1.0، رياضيات 396).
+**مفتوح الآن:**
+- **G-CHANDRA (P1):** عدّاء شاندرا يعلق بصمت عند تحميل الأوزان (4 محاولات، المعالج سليم) — حارس 240s يمنع تعليق الدور. التالي: فحص بجهاز بارد / WSL2+vLLM / نسخة GGUF.
+- **G-PENDING (P2):** 9 بطاقات انتظار توجه للبديل (Florence/dinov2/sam/GOT/nougat/bf16/BiomedCLIP/video).
+- **G-CONTEXT (P2، محفوظ بأمر القائد):** موجه الوكيل (~9k) أكبر من سياق سبارك (8192) — التكبير فقط بأمر صريح.
+- **G-VRAM (تشغيلي):** السياسة تضمينات + شات واحد — أي كسر يظهر في الفحص السريع فوراً.
+
+---
 
 This file tracks all critical gaps, weaknesses, and priorities for Alpha Wolf Agent. It is the **canonical tracker** that the team consults to know what's missing.
 

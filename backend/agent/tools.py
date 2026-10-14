@@ -609,12 +609,22 @@ def _write_file_impl(path: str, content: str, append: bool = False) -> ToolResul
     start = datetime.now(timezone.utc)
     try:
         p = Path(path)
-        if not _is_write_allowed(p):
+        try:
+            from backend.agent import body_guard as _guard
+            _gok, _greason = _guard.check_write(str(p))
+        except ImportError as e:
             return ToolResult(
                 tool_name="write_file",
                 success=False,
                 output=None,
-                error=f"Write not allowed: {path} (body is read-only or outside workspace) | الكتابة غير مسموحة",
+                error=f"Body guard unavailable: {e} | الحارس غير متاح",
+            )
+        if not _gok:
+            return ToolResult(
+                tool_name="write_file",
+                success=False,
+                output=None,
+                error=_greason,
             )
 
         # Create parent dirs if needed
@@ -737,6 +747,16 @@ def _execute_python_impl(code: str, timeout_seconds: int = 30) -> ToolResult:
         timeout_seconds = 30
     if timeout_seconds > 120:
         timeout_seconds = 120  # hard cap
+    try:
+        from backend.agent import body_guard as _guard
+        _cok, _creason = _guard.check_code(code or "")
+    except ImportError as e:
+        return ToolResult(tool_name="execute_python", success=False, output=None,
+                          error=f"Body guard unavailable: {e} | الحارس غير متاح")
+    if not _cok:
+        elapsed = (datetime.now(timezone.utc) - start).total_seconds() * 1000
+        return ToolResult(tool_name="execute_python", success=False, output=None,
+                          error=_creason, duration_ms=elapsed)
 
     try:
         # Write code to temp file (better error messages than -c)
@@ -828,6 +848,15 @@ def _run_shell_impl(command: str, cwd: str = "", timeout_seconds: int = 60) -> T
     if _SHELL_BLOCKED_RE.search(command or ""):
         return ToolResult(tool_name="run_shell", success=False, output=None,
                           error="Blocked destructive command | أمر مدمر مرفوض")
+    try:
+        from backend.agent import body_guard as _guard
+        _gok, _greason = _guard.check_command(command or "", cwd or "")
+    except ImportError as e:
+        return ToolResult(tool_name="run_shell", success=False, output=None,
+                          error=f"Body guard unavailable: {e} | الحارس غير متاح")
+    if not _gok:
+        return ToolResult(tool_name="run_shell", success=False, output=None,
+                          error=_greason)
     # Tolerance: translate common Unix-isms to PowerShell (model often emits
     # `mkdir -p dir`). FIX 2026-09-26, user-observed (Exit code 1 on mkdir -p).
     command = re.sub(r"(?m)^\s*mkdir\s+-p\s+", "New-Item -ItemType Directory -Force ", command or "")
@@ -1254,7 +1283,16 @@ def _see_image_impl(image_path: str, prompt: str = "Describe this image in detai
     start = datetime.now(timezone.utc)
     try:
         from backend.agent import vision as _vision_mod
-        out = _vision_mod.describe_image(image_path, prompt=prompt or "Describe this image in detail")
+        # MODEL-ROUTER (وصل 2026-10-13): pick light vs flagship automatically;
+        # flagship parks the chat model first (VRAM governor), chat reloads after.
+        try:
+            from backend.agent import model_router_bridge as _mrb
+            _vpick = _mrb.pick_vision(prompt or "")
+            _mrb.govern_vram_for(_vpick["model"])
+            _vmodel = _vpick["model"]
+        except Exception:
+            _vmodel = None
+        out = _vision_mod.describe_image(image_path, prompt=prompt or "Describe this image in detail", model=_vmodel)
     except Exception as e:
         elapsed = (datetime.now(timezone.utc) - start).total_seconds() * 1000
         return ToolResult(tool_name="see_image", success=False, output=None,
@@ -1988,8 +2026,8 @@ TOOL_SPECS: List[ToolSpec] = [
     ),
     ToolSpec(
         name="write_file",
-        description="Write content to a file (creates parent dirs). Overwrites by default. Body directory is read-only.",
-        description_ar="كتابة محتوى في ملف (ينشئ المجلدات الأصلية). يستبدل افتراضياً. مجلد body للقراءة فقط.",
+        description="Write content to a file (creates parent dirs). PROJECTS ONLY: body/ and self-code (backend/frontend/scripts) are read-only; self-changes go via install_skill. .env/databases denied.",
+        description_ar="كتابة محتوى في ملف — للمشاريع فقط: الجسد وكود الوكيل للقراءة فقط، والتعديل الذاتي عبر install_skill.",
         parameters={
             "type": "object",
             "properties": {
@@ -2018,8 +2056,8 @@ TOOL_SPECS: List[ToolSpec] = [
     ),
     ToolSpec(
         name="execute_python",
-        description="Execute Python code in a subprocess with timeout (default 30s). Output includes stdout, stderr, return code.",
-        description_ar="تنفيذ كود بايثون في عملية فرعية مع مهلة (30 ثانية افتراضياً). المخرجات تشمل stdout و stderr ورمز الخروج.",
+        description="Execute Python code in a subprocess with timeout (default 30s). Guarded: no writes to body/self-code, no shell primitives (os.system), no eval/exec. Use for project code and verification.",
+        description_ar="تنفيذ كود بايثون — محروس: ممنوع الكتابة في الجسد/كود الوكيل، وممنوع بدائيات الشل.",
         parameters={
             "type": "object",
             "properties": {
@@ -2077,8 +2115,8 @@ TOOL_SPECS: List[ToolSpec] = [
     ),
     ToolSpec(
         name="install_skill",
-        description="Create and install a new skill for yourself from Python source (must define run(**kwargs)). Blocked: shells, eval/exec, subprocess, sockets. After install, call it via run_skill.",
-        description_ar="إنشاء وتثبيت مهارة جديدة لنفسك من كود بايثون (يجب أن يعرف run). بعد التثبيت استدعها عبر run_skill.",
+        description="Create and install a new skill for yourself from Python source (must define run(**kwargs)). GOVERNED: plan first (run_skill(brainstorming), state WHAT+WHY), then gate, then install, then TEST it via run_skill, then review. Blocked: shells, eval/exec, subprocess, sockets. Repairs: read it, uninstall, reinstall fixed — never hand-edit backend files.",
+        description_ar="إنشاء مهارة لنفسك — محكوم: خطط أولاً ثم البوابة ثم التثبيت ثم الاختبار ثم المراجعة.",
         parameters={
             "type": "object",
             "properties": {
@@ -2117,7 +2155,7 @@ TOOL_SPECS: List[ToolSpec] = [
     ),
     ToolSpec(
         name="run_shell",
-        description="Run a shell command (PowerShell) confined to safe dirs (projects folder outside body by default). Use to build/run apps, pip/npm install, git, tests. Destructive commands rejected.",
+            description="Run a shell command (PowerShell) confined to safe dirs (projects folder outside body by default). File writes allowed only under projects/temp — body/self-code writes rejected. Use to build/run apps, pip/npm install, git, tests. Destructive commands rejected.",
         description_ar="تنفيذ أمر shell مقيد بالمجلدات الآمنة (مجلد المشاريع خارج الجسد افتراضياً). للبناء والتشغيل والتثبيت والاختبارات.",
         parameters={
             "type": "object",
@@ -2176,8 +2214,8 @@ TOOL_SPECS: List[ToolSpec] = [
     ),
     ToolSpec(
         name="install_skill_from_url",
-        description="Fetch an external skill (skills.sh/GitHub/trusted https) and adapt it to yourself: .py passes the safety gate; SKILL.md packs become adapted playbook skills. Then use run_skill.",
-        description_ar="جلب مهارة خارجية وتكييفها لك: بايثون عبر بوابة الأمان، وحزم SKILL.md كمهارات مكيفة. ثم شغلها عبر run_skill.",
+        description="Fetch an external skill (skills.sh/GitHub/trusted https) and adapt it to yourself: .py passes the safety gate; SKILL.md packs become adapted playbook skills. GOVERNED: plan first (WHAT+WHY), then fetch, then TEST via run_skill, then review. Then use run_skill.",
+        description_ar="جلب مهارة خارجية وتكييفها لك — محكوم: خطط أولاً ثم اجلب ثم اختبر ثم راجع.",
         parameters={
             "type": "object",
             "properties": {
@@ -2332,8 +2370,8 @@ TOOL_SPECS: List[ToolSpec] = [
     # ========================================================================
     ToolSpec(
         name="forge_skill",
-        description="Auto-create a new skill from a code template (analyze pattern then build skill). Use when you discover a reusable pattern. Set auto_save=true to write to disk (requires explicit permission).",
-        description_ar="إنشاء مهارة جديدة تلقائياً من كود (تحليل النمط ثم البناء). استخدمها عند اكتشاف نمط قابل لإعادة الاستخدام. اضبط auto_save=true للكتابة على القرص (يتطلب إذن صريح).",
+        description="Auto-create a new skill from a code template (analyze pattern then build skill). GOVERNED: plan first (WHAT+WHY), dry-run review the generated code, then TEST via run_skill. Set auto_save=true to write to disk (requires explicit permission).",
+        description_ar="إنشاء مهارة تلقائياً — محكوم: خطط أولاً وراجع الكود ثم اختبر. auto_save=true يتطلب إذن صريح.",
         parameters={
             "type": "object",
             "properties": {
@@ -2624,6 +2662,11 @@ def parse_openai_tool_calls(message: Dict[str, Any]) -> List[Dict[str, Any]]:
             args = raw_args
         else:
             args = {}
+        # FIX 2026-10-12 (local chain): stock qwen3 wraps args in an extra
+        # envelope {"function": "<name>", "arguments": {...}} (native-dialect
+        # leak). Unwrap so required-param validation sees the real args.
+        if isinstance(args, dict) and isinstance(args.get("arguments"), dict) and set(args.keys()) <= {"function", "arguments", "name", "id"}:
+            args = args["arguments"]
         normalized.append({
             "name": name,
             "arguments": args,
@@ -2711,12 +2754,47 @@ def _self_test() -> bool:
     # Test 7: Safety — write to body/ should be blocked
     body_file = _project_root() / "body" / "memory" / "test_write.txt"
     r = execute_tool("write_file", {"path": str(body_file), "content": "should fail"})
-    if not r.success and "not allowed" in (r.error or "").lower():
+    if not r.success and ("not allowed" in (r.error or "").lower() or "denied" in (r.error or "").lower()):
         tests_passed += 1
         print(f"  ✓ write_file blocked body/ | حماية الجسد")
     else:
         tests_failed += 1
         print(f"  ✗ write_file allowed body/ write — SECURITY ISSUE")
+
+    # Test 7b: Body-Guard — write to backend/ (self-code) must be blocked;
+    # self-changes go only via install_skill* (gated + registered).
+    self_file = _project_root() / "backend" / "agent" / "test_write.txt"
+    r = execute_tool("write_file", {"path": str(self_file), "content": "should fail"})
+    if not r.success and "install_skill" in (r.error or ""):
+        tests_passed += 1
+        print(f"  ✓ write_file blocked backend/ | فصل الكود الذاتي")
+    else:
+        tests_failed += 1
+        print(f"  ✗ write_file allowed backend/ write — SECURITY ISSUE")
+
+    # Test 7c: Body-Guard — shell write into body/ must be blocked.
+    r = execute_tool("run_shell", {
+        "command": f"Set-Content -Path '{_project_root() / 'body' / 'x.txt'}' -Value hi",
+        "cwd": str(tmp_dir),
+    })
+    if not r.success and ("مرفوض" in (r.error or "") or "denied" in (r.error or "").lower()):
+        tests_passed += 1
+        print(f"  ✓ run_shell blocked body/ write | حارس الأوامر")
+    else:
+        tests_failed += 1
+        print(f"  ✗ run_shell allowed body/ write — SECURITY ISSUE")
+
+    # Test 7d: Body-Guard — python snippet writing self-code must be blocked.
+    r = execute_tool("execute_python", {
+        "code": f"open(r'{_project_root() / 'backend' / 'x.py'}','w').write('x')",
+        "timeout_seconds": 5,
+    })
+    if not r.success and ("مرفوض" in (r.error or "") or "denied" in (r.error or "").lower()):
+        tests_passed += 1
+        print(f"  ✓ execute_python blocked self-code write | حارس الكود")
+    else:
+        tests_failed += 1
+        print(f"  ✗ execute_python allowed self-code write — SECURITY ISSUE")
 
     # Test 8: grep_in_files (content search)
     r = execute_tool("grep_in_files", {

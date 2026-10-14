@@ -51,7 +51,6 @@ OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 VISION_MODEL = os.environ.get("VISION_MODEL", "moondream")
 FALLBACK_VISION_MODEL = "qwen2.5vl:7b"
 DEFAULT_VISION_MODEL = VISION_MODEL  # alias kept for backend/main.py compat
-DEFAULT_VISION_MODEL = VISION_MODEL  # alias kept for backend/main.py compat
 
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}
@@ -127,21 +126,26 @@ def _load_image_b64(image_path: str) -> tuple:
 
 
 def describe_image(image_path: str, prompt: str = "Describe this image | صف هذه الصورة",
-                   max_tokens: int = 512) -> Dict[str, Any]:
+                   max_tokens: int = 512, model: Optional[str] = None) -> Dict[str, Any]:
     """Describe an image with the local vision model (LIVE).
 
     وصف صورة بنموذج الرؤية المحلي (يعمل فعلياً).
 
     NOTE (Iron Law #41): vision models swap VRAM with the 9.6GB chat model —
     moondream (1.7GB) answers in ~1min; use deliberately, one look per need.
+
+    MODEL-ROUTER (وصل 2026-10-13): `model` overrides VISION_MODEL for this
+    call only (None = configured default). The VRAM parking itself is done
+    by the caller (govern_vram_for) before invoking.
     """
+    _mdl = model or VISION_MODEL
     start = time.time()
     try:
         b64, size_kb = _load_image_b64(image_path)
     except (FileNotFoundError, ValueError, OSError) as e:
         return {"success": False, "error": str(e), "vision_available": is_available()}
     payload = json.dumps({
-        "model": VISION_MODEL,
+        "model": _mdl,
         "messages": [{"role": "user", "content": prompt or "Describe this image",
                       "images": [b64]}],
         "stream": False,
@@ -156,7 +160,7 @@ def describe_image(image_path: str, prompt: str = "Describe this image | صف ه
             data = json.loads(resp.read().decode("utf-8"))
     except Exception as e:
         return {"success": False, "error": f"Vision model call failed: {type(e).__name__}: {e}",
-                "model": VISION_MODEL, "vision_available": is_available()}
+                "model": _mdl, "vision_available": is_available()}
     text = ((data.get("message") or {}).get("content") or "").strip()
     if not text:
         # Fallback model once before giving up
@@ -176,9 +180,9 @@ def describe_image(image_path: str, prompt: str = "Describe this image | صف ه
             used = FALLBACK_VISION_MODEL
         except Exception as e2:
             return {"success": False, "error": f"Empty vision reply (+fallback failed: {e2})",
-                    "model": VISION_MODEL}
+                    "model": _mdl}
     else:
-        used = VISION_MODEL
+        used = _mdl
     if not text:
         return {"success": False, "error": "Empty vision reply", "model": used}
     return {"success": True, "description": text, "model_used": used,

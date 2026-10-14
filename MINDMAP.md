@@ -1,12 +1,14 @@
 # 🧠 Alpha Wolf Agent — Project Mind Map
 
 > خريطة ذهنية شاملة للمشروع — أين هو الآن، كيف وصلنا، إلى أين يتجه.
+> آخر تحديث: 2026-10-13 (عصر الموجه التلقائي — 58 نموذجاً بالقائمة).
 
 ## 🎯 Project Mission
 
-**Alpha Wolf Agent** = AI agent محلي (offline) مبني على Llama-3.1-8B + LoRA adapter.
+**Alpha Wolf Agent** = AI agent محلي يعمل ساعات طويلة، واعٍ بذاته، يبدّل نماذجه تلقائياً.
 - **الغرض:** مساعد شخصي للقائد هشام، يعمل بدون إنترنت، يحتفظ بالذاكرة، يمكنه استخدام أدوات.
 - **الفلسفة:** "wolf" = mistake_hunting, goal_persistence, tenacity, deep_thinking, resourceful, self_aware, reinforcement_learning.
+- **العقل المخدوم (2026-10-12، TRAINING SUSPENDED):** سلسلة Ollama محلية — سبارك الأساسي (`maternion/spark-x2.5:4b-q4_K_M`)، لا تدريب ولا أوزان مدربة تُخدم.
 
 ---
 
@@ -18,38 +20,35 @@
 │  http://127.0.0.1:8501                                       │
 │  - 7 pages: Chat, Agent, Memory, Tools, Projects, Health,     │
 │    Inspector                                                 │
-│  - 67 APIClient methods (98.63% backend integration)         │
+│  - Model picker: تلقائي (افتراضي) + 58 نموذجاً (حي من /v1/models) │
 │  - WCAG 2.1 AA + Mobile Responsive                           │
 └─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼  HTTP/SSE
+                              │ HTTP/SSE
+                              ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    BACKEND (FastAPI :8001)                    │
-│  - 73 endpoints                                              │
-│  - 25+ tools (file, code, web, memory, body, self-extension) │
-│  - 29+ tool implementations (TOOL_SPECS)                      │
-│  - Force-execute detectors + Sanity checks                    │
-│  - Retry + Cache + Checkpoints + Compression                 │
+│  - 29 tools + 39 skills (مهارة حقيقية لكل قسم، 16 جديدة)      │
+│  - قائمة 58 نموذجاً: 6 أولاما مباشرة + 52 تخصصياً بمهاراتهم   │
+│  - بديل شات تلقائي (7 مواقع + البث) + رؤية تلقائية + تقطير    │
+│  - الجسر: backend/agent/model_router_bridge.py                │
+│  - العداء المشترك: backend/agent/hf_runner.py                 │
 └─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼  HTTP
-┌─────────────────────────────────────────────────────────────┐
-│                    OLLAMA (:11434)                            │
-│  Models installed:                                           │
-│  - alpha-wolf-agent-v8 (4.9 GB, Wolf merged) ✅              │
-│  - llama3.1:8b (4.9 GB, BASE — for re-training fallback)    │
-│  - nomic-embed-text (274 MB, embeddings)                      │
-│  - moondream, qwen2.5vl, qwen3 (vision/variants)              │
-│  ❌ REMOVED: alpha-wolf-agent (broken), gemma4 (unused)       │
-└─────────────────────────────────────────────────────────────┘
-                              │
+                    │ HTTP                  │ Transformers/HF
+                    ▼                       ▼  (D: أوزان أصلية)
+┌────────────────────────┐  ┌──────────────────────────────────┐
+│   OLLAMA (:11434)       │  │  63 نموذجاً / 21 قسماً (BUILD)   │
+│  سبارك ⭐ الأساسي       │  │  شات/رؤية/OCR/صور/صوت/برمجة/      │
+│  + بدائل+qwen2.5vl+     │  │  رياضيات/حيوي/أرضي/مناخ...       │
+│  moondream + صغار       │  │  شاندرا أول OCR · توربو للصور    │
+└────────────────────────┘  └──────────────────────────────────┘
+                              │ ComfyUI :8188 (torbo int8 حي ✓)
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    BODY (Knowledge Storage)                   │
 │  - 4-layer memory: short-term, long-term, episodic, semantic │
-│  - ChromaDB: 3218 chunks in `alpha_wolf_project_index`       │
-│  - NetworkX: knowledge graph (entities + relations)          │
-│  - SQLite: 16 tables (episodes, goals, mistakes, etc.)       │
+│  - ChromaDB: 4905 chunks عبر 14 مجموعة (RAG حي)               │
+│  - NetworkX: knowledge graph (17 nodes, 7 edges)              │
+│  - SQLite: 16 tables + تقطير تلقائي لكل دور ناجح              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -75,10 +74,12 @@ E:\Projects and systems managed by the team of experts\Alpha Wolf Agent\
 │   │   ├── memory_layers.py      # 4-layer unified recall (NEW R26)
 │   │   ├── code_exec.py          # Python execution + safety check
 │   │   ├── web_search.py         # Google News + Bing + Wiki chain
-│   │   ├── skills_manager.py     # Skill registry
+│   │   ├── skills_manager.py     # Skill registry (39 مهارة حية)
 │   │   ├── skill_forge.py        # Skill installation
+│   │   ├── model_router_bridge.py # جسر التوجيه: بديل+أقسام+تقطير (2026-10-13)
+│   │   ├── hf_runner.py          # عداء متخصصي HF المشترك (2026-10-13)
 │   │   └── capabilities.py       # Live capability map
-│   └── skills/                   # Skill implementations
+│   └── skills/                   # Skill implementations (39: 16 للأقسام 2026-10-13)
 │
 ├── frontend/                     # Streamlit UI
 │   ├── streamlit_preview.py      # Main UI (7 pages + P3 sections)
@@ -136,43 +137,39 @@ E:\Projects and systems managed by the team of experts\Alpha Wolf Agent\
 - **Name:** Alpha Wolf Agent
 - **Traits (7):** mistake_hunting, goal_persistence, tenacity, deep_thinking, resourceful, self_aware, reinforcement_learning
 - **Creator:** القائد هشام
-- **Base:** Llama-3.1-8B-Instruct
-- **Adapter:** v8_wolf (rank=16, 582 examples, 164 MB)
+- **Base (2026-10-12):** سلسلة Ollama محلية — سبارك الأساسي (لا تدريب يُخدم)
+- **Adapter:** لا يُخدم حالياً (أوزان LoRA على القرص فقط — TRAINING SUSPENDED)
+
+### Models & Skills (2026-10-13)
+- **قائمة الدردشة:** 58 نموذجاً (6 أولاما مباشرة + 52 تخصصياً بمهاراتهم) + وضع تلقائي
+- **الأقسام:** 21 قسماً / 63 نموذجاً — مهارة حقيقية لكل قسم (39 مهارة مسجلة)
+- **مثبت حياً:** توربو صور (منارة PNG)، حلقة صوتية (تفريغ مطابق)، بروتين (1.0)، رياضيات (396)
+- **معلق بصدق:** عدّاء شاندرا (حارس 240s) + 9 بطاقات انتظار
 
 ### Training Data
-- **v0_identity** → v8_wolf progression (582 → 582 → ... → final)
-- **Quality:** Acceptable (Wolf is not solid under adversarial — needs expansion to 200+)
+- **الحالة:** مجمّدة (TRAINING SUSPENDED 2026-10-12) — الدولاب يصدّر ويُنقّي فقط
 
 ### Tools Current
-- **Total:** 29+ tools
+- **Total:** 29 tools
 - **Categories:** compute (3), file (3), web (2), perception (1), knowledge (3), memory (3+4), planning (3), self_extension (4), self_repair (1), self_awareness (4)
 
 ---
 
 ## 🎯 Active Goals (recurring)
 
-### Phase 36: Training Expansion
-- **Description:** Add 50+ adversarial identity-preservation training pairs
-- **Goal:** Grade B → A
-- **Status:** Pending القائد approval
-- **Estimated effort:** 1 day
+### عصر الموجه التلقائي (مكتمل 2026-10-13)
+- **المنجز:** 58 بالقائمة + 21 قسماً + 39 مهارة + بديل/رؤية/تقطير تلقائي + ComfyUI حي
+- **Status:** يعمل — مثبت حياً (منارة، صوت مطابق، بروتين 1.0، رياضيات 396)
 
-### Phase 37: Arabic Fine-tuning
-- **Description:** Improve Arabic grammar in outputs
-- **Goal:** Arabic conversational fluency
-- **Status:** Pending القائد approval
-- **Estimated effort:** 2 days
-
-### Phase 38: Performance Tuning
-- **Description:** Latency < 3s for typical prompts
-- **Goal:** Speed
-- **Status:** Pending القائد approval
-- **Estimated effort:** 1 day
+### المعلق بصدق
+- **عدّاء شاندرا:** تحميل الأوزان يعلق بصمت (4 محاولات) — حارس 240s يمنع تعليق الدور
+- **9 بطاقات انتظار:** توجه للبديل الجاهز (Florence/dinov2/sam/GOT/nougat/bf16/BiomedCLIP/video)
+- **سياق سبارك:** محفوظ 8192 بأمر القائد — التكبير فقط بأمر صريح
 
 ### Long-term: Body KB Expansion
 - **Description:** Add more knowledge to the body (books, papers, conversations)
 - **Goal:** Richer context
-- **Status:** Continuous
+- **Status:** Continuous (+ تقطير تلقائي لكل دور ناجح منذ 2026-10-13)
 
 ---
 
@@ -181,12 +178,16 @@ E:\Projects and systems managed by the team of experts\Alpha Wolf Agent\
 | Metric | Value | Date |
 |---|---|---|
 | Frontend integration | 98.63% | 2026-10-06 |
-| Wolf v8 grade | B (3/4 quick fixes) | 2026-10-06 |
-| Self-tests | 25/25 PASS | 2026-09-28 |
-| MCP test suite | 21/21 PASS | 2026-09-27 |
+| Backend pytest (bridge+registry+sections) | 22/22 PASS | 2026-10-13 |
+| Capability self-test | PASS (كان أحمر: طلب منفذاً متقاعداً) | 2026-10-13 |
+| Quick checks | 8/9 (التكرار المزدوج بأولاما مؤجل بدليل) | 2026-10-13 |
+| Engine tests (router+sections) | 52/52 PASS | 2026-10-13 |
+| Skill self-tests | 14/14 PASS | 2026-10-13 |
+| Chat-list models | 58 (6+52) | 2026-10-13 |
+| Registered skills | 39 (16 للأقسام) | 2026-10-13 |
+| RAG index | 4905 chunks / 14 collections | 2026-10-13 |
 | Frontend WCAG | 2.1 AA | 2026-10-06 |
-| Total endpoints | 73 | 2026-10-06 |
-| Active tools | 29+ | 2026-10-06 |
+| Active tools | 29 | 2026-10-06 |
 
 ---
 
@@ -198,10 +199,8 @@ E:\Projects and systems managed by the team of experts\Alpha Wolf Agent\
 
 ---
 
-## 📦 Git Status (2026-10-06)
+## 📦 Git Status (2026-10-13)
 
 - **Repo:** Initialized on `master` branch
 - **Remote:** `https://github.com/hesham-hamouda/alpha-wolf-agent.git`
-- **Existing commits:** 8 (before this commit batch)
-- **Working tree changes:** 170 files (modified/deleted/new)
-- **Strategy:** Atomic commits grouped by Round (R32 → R35 + docs)
+- **Note:** شجرة العمل تحمل تعديلات متراكمة (قديمة + توصيل الموجه) — تُراجع قبل أي commit

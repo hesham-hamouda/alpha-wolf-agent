@@ -95,6 +95,7 @@ T = {
     "stop_generating": "Stop | إيقاف",
     "thinking": "Alpha Wolf is thinking | الذئب يفكر",
     "thinking_with_dots": "Alpha Wolf is thinking...",
+    "thinking_no_answer": "Wolf thought deeply but did not provide an answer | فكّر الذئب بعمق لكن لم يُقدّم إجابة",
     "tool_calling": "Tool Call | استدعاء أداة",
     "tool_result": "Result | النتيجة",
     "tool_duration": "Duration | المدة",
@@ -256,6 +257,324 @@ WOLF_TRAITS = [
 
 
 # ============================================================================
+# Phase 58 — Model Display + Multimodal Support
+# ============================================================================
+# Centralized registry of all supported model identities. Each entry carries
+# bilingual name + emoji + capability flags (text/vision/video) so the UI can
+# advertise them in the Model Identity Banner and enable the matching chat
+# input features (e.g., image upload when "vision" is in capabilities).
+
+# Canonical Phase 58 model list — single source of truth for the UI.
+# POLICY 2026-10-12 (القائد): DEFAULT = maternion/spark-x2.5:4b-q4_K_M (سبارك الأساسي).
+# Mirrors backend _AVAILABLE_MODELS (/v1/models). First entry = default.
+PHASE_58_DEFAULT_MODEL = "maternion/spark-x2.5:4b-q4_K_M"
+
+MODEL_DISPLAY: dict[str, dict] = {
+    "maternion/spark-x2.5:4b-q4_K_M": {
+        "served_ctx": 262144,
+        "arch_ctx": 1048576,
+        "name_ar": "سبارك X2.5 4b ⭐ الأساسي",
+        "name_en": "Spark X2.5 4b ⭐ Default",
+        "emoji": "🔥",
+        "capabilities": ["text"],
+        "size_b": 4,
+        "quant": "q4_K_M",
+    },
+    "qwen3:4b": {
+        "served_ctx": 65536,
+        "arch_ctx": 262144,
+        "name_ar": "كوين 3 4B",
+        "name_en": "Qwen3 4B",
+        "emoji": "🐺",
+        "capabilities": ["text"],
+        "size_b": 4,
+        "quant": "q4_K_M",
+    },
+    "qwen2.5vl:7b": {
+        "served_ctx": 32768,
+        "arch_ctx": 128000,
+        "name_ar": "كوين رؤية 7B",
+        "name_en": "Qwen2.5-VL 7B Vision",
+        "emoji": "👁️",
+        "capabilities": ["text", "vision"],
+        "size_b": 7,
+        "quant": "q4_K_M",
+    },
+    "moondream:latest": {
+        "served_ctx": 2048,
+        "arch_ctx": 2048,
+        "name_ar": "مووندريم رؤية خفيف",
+        "name_en": "Moondream Vision Light",
+        "emoji": "🌙",
+        "capabilities": ["text", "vision"],
+        "size_b": 2,
+        "quant": "q4_K_M",
+    },
+    "qwen2.5:1.5b": {
+        "served_ctx": 4096,
+        "arch_ctx": 32768,
+        "name_ar": "كوين 1.5B سريع",
+        "name_en": "Qwen2.5 1.5B Fast",
+        "emoji": "⚡",
+        "capabilities": ["text"],
+        "size_b": 2,
+        "quant": "q4_K_M",
+    },
+    "qwen2.5:0.5b": {
+        "served_ctx": 4096,
+        "arch_ctx": 32768,
+        "name_ar": "كوين 0.5B خفيف",
+        "name_en": "Qwen2.5 0.5B Tiny",
+        "emoji": "🍃",
+        "capabilities": ["text"],
+        "size_b": 1,
+        "quant": "q4_K_M",
+    },
+    # MODEL-ROUTER chat-list (وصل 2026-10-13 — 52 مدخل تخصصي، ctx=0 للمهارات).
+    "alpha-wolf-qwen2.5-1.5b": {"served_ctx": 8192, "arch_ctx": 32768,
+        "name_ar": "كوين الذئب 1.5B", "name_en": "Wolf Qwen 1.5B named",
+        "emoji": "⚡", "capabilities": ["text"], "size_b": 2, "quant": "q4_K_M"},
+    "qwen2.5:1.5b-local": {"served_ctx": 8192, "arch_ctx": 32768,
+        "name_ar": "كوين 1.5B الأصلي", "name_en": "Qwen 1.5B local original",
+        "emoji": "⚡", "capabilities": ["text"], "size_b": 2, "quant": "q4_K_M"},
+    "moondream": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "مووندريم (مختصر)", "name_en": "Moondream short id",
+        "emoji": "🌙", "capabilities": ["text", "vision"], "size_b": 2, "quant": "q4_K_M"},
+    "Florence-2-base": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "فلورنس 2 (قريباً)", "name_en": "Florence-2 pending",
+        "emoji": "👁", "capabilities": ["text", "vision"], "size_b": 1, "quant": "bf16"},
+    "dinov2-small": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "دينو v2 (قريباً)", "name_en": "DINOv2 pending",
+        "emoji": "👁", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "sam-vit-base": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "سام (قريباً)", "name_en": "SAM pending",
+        "emoji": "👁", "capabilities": ["text", "vision"], "size_b": 1, "quant": "bf16"},
+    "chandra-ocr-2": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "شاندرا OCR 2", "name_en": "Chandra OCR 2",
+        "emoji": "📄", "capabilities": ["text", "vision"], "size_b": 4, "quant": "bf16"},
+    "GOT-OCR2_0": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "جوت OCR (استخدم شاندرا)", "name_en": "GOT-OCR2 use chandra",
+        "emoji": "📄", "capabilities": ["text", "vision"], "size_b": 1, "quant": "bf16"},
+    "nougat-small": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "نوقت علمي (استخدم شاندرا)", "name_en": "Nougat use chandra",
+        "emoji": "📄", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "qwen-image-2.1-turbo-int8": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "توربو توليد 8 خطوات", "name_en": "Qwen Image Turbo int8",
+        "emoji": "🎨", "capabilities": ["text", "image"], "size_b": 7, "quant": "int8"},
+    "qwen-image-2.1-bf16": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "التوليد الكامل (استخدم التوربو)", "name_en": "Qwen Image bf16 use turbo",
+        "emoji": "🎨", "capabilities": ["text", "image"], "size_b": 14, "quant": "bf16"},
+    "faster-whisper-base": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "تفريغ base", "name_en": "Whisper base",
+        "emoji": "🎙", "capabilities": ["text", "audio"], "size_b": 0, "quant": "ct2"},
+    "faster-whisper-small": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "تفريغ small", "name_en": "Whisper small",
+        "emoji": "🎙", "capabilities": ["text", "audio"], "size_b": 0, "quant": "ct2"},
+    "faster-whisper-medium": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "تفريغ medium", "name_en": "Whisper medium",
+        "emoji": "🎙", "capabilities": ["text", "audio"], "size_b": 1, "quant": "ct2"},
+    "faster-whisper-large-v3-turbo": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "تفريغ توربو ⭐", "name_en": "Whisper turbo",
+        "emoji": "🎙", "capabilities": ["text", "audio"], "size_b": 2, "quant": "ct2"},
+    "supertonic3": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "نطق سوبرتونك", "name_en": "Supertonic TTS",
+        "emoji": "🔊", "capabilities": ["text", "audio"], "size_b": 0, "quant": "onnx"},
+    "Qwen2.5-Coder-1.5B": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "كوين كودر 1.5B", "name_en": "Qwen Coder 1.5B",
+        "emoji": "💻", "capabilities": ["text", "code"], "size_b": 2, "quant": "bf16"},
+    "SmolLM2-1.7B": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "سمول 1.7B", "name_en": "SmolLM2 1.7B",
+        "emoji": "💻", "capabilities": ["text", "code"], "size_b": 2, "quant": "bf16"},
+    "Qwen2.5-Math-1.5B": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "رياضيات 1.5B", "name_en": "Qwen Math 1.5B",
+        "emoji": "🔢", "capabilities": ["text"], "size_b": 2, "quant": "bf16"},
+    "NuExtract-tiny": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "استخلاص JSON", "name_en": "NuExtract JSON",
+        "emoji": "🧾", "capabilities": ["text"], "size_b": 2, "quant": "bf16"},
+    "esm2_t30_150M": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "بروتين ESM كبير", "name_en": "ESM-2 150M",
+        "emoji": "🧬", "capabilities": ["text"], "size_b": 0, "quant": "bf16"},
+    "esm2_t12_35M": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "بروتين ESM صغير", "name_en": "ESM-2 35M",
+        "emoji": "🧬", "capabilities": ["text"], "size_b": 0, "quant": "bf16"},
+    "prot_bert": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "بروت بيرت", "name_en": "ProtBERT",
+        "emoji": "🧬", "capabilities": ["text"], "size_b": 0, "quant": "bf16"},
+    "DNABERT-2-117M": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "دنا بيرت 2", "name_en": "DNABERT-2",
+        "emoji": "🧪", "capabilities": ["text"], "size_b": 0, "quant": "bf16"},
+    "agro-nucleotide-1b": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "نيوكليوتيد زراعي", "name_en": "Agro-nucleotide 1B",
+        "emoji": "🧪", "capabilities": ["text"], "size_b": 1, "quant": "bf16"},
+    "hyenadna-tiny": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "هايينا DNA", "name_en": "HyenaDNA tiny",
+        "emoji": "🧪", "capabilities": ["text"], "size_b": 0, "quant": "bf16"},
+    "ChemBERTa-10M-MTR": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "كيم بيرتا خصائص", "name_en": "ChemBERTa MTR",
+        "emoji": "⚗", "capabilities": ["text"], "size_b": 0, "quant": "bf16"},
+    "MoLFormer-XL": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "مول فورمر", "name_en": "MoLFormer XL",
+        "emoji": "⚗", "capabilities": ["text"], "size_b": 1, "quant": "bf16"},
+    "phikon": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "فايكون شرائح", "name_en": "Phikon slides",
+        "emoji": "🏥", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "BiomedCLIP": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "بايوميد كليب (استخدم بايوبيرت)", "name_en": "BiomedCLIP use biobert",
+        "emoji": "🏥", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "biobert": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "بايوبيرت", "name_en": "BioBERT",
+        "emoji": "🏥", "capabilities": ["text"], "size_b": 0, "quant": "bf16"},
+    "PathologyBERT": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "باثولوجي بيرت", "name_en": "PathologyBERT",
+        "emoji": "🏥", "capabilities": ["text"], "size_b": 0, "quant": "bf16"},
+    "scibert": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "ساي بيرت", "name_en": "SciBERT",
+        "emoji": "🏥", "capabilities": ["text"], "size_b": 0, "quant": "bf16"},
+    "clip-fine-tuned-satellite": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "قمر مصنّف", "name_en": "Satellite CLIP",
+        "emoji": "🛰", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "segformer-b0": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "قمر مجزّئ", "name_en": "SegFormer b0",
+        "emoji": "🛰", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "plantnet300k": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "نباتات 300k", "name_en": "PlantNet 300k",
+        "emoji": "🌾", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "CGIAR-Crop": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "محاصيل CGIAR", "name_en": "CGIAR Crop",
+        "emoji": "🌾", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "Mango_leaf": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "ورقة مانجو", "name_en": "Mango leaf",
+        "emoji": "🌾", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "aquaculture_oysters": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "محار مزارع", "name_en": "Aquaculture oysters",
+        "emoji": "🌾", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "vit-Diatome": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "دياتومات", "name_en": "ViT Diatome",
+        "emoji": "🌾", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "Marine_Species": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "كائنات بحرية", "name_en": "Marine Species",
+        "emoji": "🌊", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "CoralSCOP": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "مرجان", "name_en": "CoralSCOP",
+        "emoji": "🌊", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "micro-algae": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "طحالب دقيقة", "name_en": "Micro-algae",
+        "emoji": "🌊", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "fish-shrimp": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "سمك وجمبري", "name_en": "Fish shrimp",
+        "emoji": "🌊", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "food-nateraw": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "طعام", "name_en": "Food",
+        "emoji": "🍽", "capabilities": ["text", "vision"], "size_b": 0, "quant": "bf16"},
+    "climatebert": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "مناخ بيرت", "name_en": "ClimateBERT",
+        "emoji": "🌡", "capabilities": ["text"], "size_b": 0, "quant": "bf16"},
+    "tspulse-r1": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "نبض السلاسل", "name_en": "TSPulse r1",
+        "emoji": "🌡", "capabilities": ["text"], "size_b": 0, "quant": "bf16"},
+    "ttm-r2": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "تنبؤ TTM", "name_en": "TinyTimeMixer r2",
+        "emoji": "🌡", "capabilities": ["text"], "size_b": 0, "quant": "bf16"},
+    "videomae-base": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "فيديو MAE (قريباً)", "name_en": "VideoMAE pending",
+        "emoji": "🎬", "capabilities": ["text", "video"], "size_b": 0, "quant": "bf16"},
+    "timesformer": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "تايم فورمر (قريباً)", "name_en": "TimeSformer pending",
+        "emoji": "🎬", "capabilities": ["text", "video"], "size_b": 1, "quant": "bf16"},
+    "ast-finetuned-audioset": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "أحداث صوتية AST", "name_en": "AST AudioSet",
+        "emoji": "🎧", "capabilities": ["text", "audio"], "size_b": 0, "quant": "bf16"},
+    "wav2vec2-base": {"served_ctx": 0, "arch_ctx": 0,
+        "name_ar": "تمثيل كلامي", "name_en": "wav2vec2",
+        "emoji": "🎧", "capabilities": ["text", "audio"], "size_b": 0, "quant": "bf16"},
+}
+
+
+def escape_html(text: str) -> str:
+    """Escape HTML special characters for safe rendering.
+    Lightweight local copy — avoids circular import with streamlit_preview.
+    """
+    if not text:
+        return ""
+    return (
+        str(text)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace(chr(34), "&quot;")
+        .replace(chr(39), "&#x27;")
+    )
+
+
+def _fmt_ctx(n: Any) -> str:
+    """Human context size: 262144 → '256k', 2048 → '2k'. (القائد: إظهار السياق)"""
+    try:
+        v = int(n or 0)
+    except (TypeError, ValueError):
+        return ""
+    if v >= 1024 and v % 1024 == 0:
+        return f"{v // 1024}k"
+    return str(v) if v else ""
+
+
+def get_available_models_for_ui(api_client=None) -> list[tuple[str, str]]:
+    """Build dropdown options [(model_id, label)] for the model picker.
+
+    بناء خيارات القائمة المنسدلة [(المعرف، التسمية)].
+
+    Tries backend /v1/models first (live single source of truth),
+    falls back to local MODEL_DISPLAY when backend is offline.
+    Label format: "{emoji} {name_ar} — {name_en}".
+    First entry is always تلقائي (router picks spark by default, falls back
+    automatically on failure); manual picks override it per session.
+    """
+    options: list[tuple[str, str]] = [("auto-select", "🤖 تلقائي — الوكيل يختار ويبدّل")]
+    live: list[dict[str, Any]] = []
+    try:
+        if api_client is not None:
+            live = api_client.list_models() or []
+    except Exception:
+        live = []
+    if live:
+        for m in live:
+            mid = m.get("id", "")
+            if not mid:
+                continue
+            _ctx = _fmt_ctx(m.get("served_ctx"))
+            _suffix = f" · {_ctx} ctx" if _ctx else ""
+            label = f"{m.get('emoji', '🤖')} {m.get('name_ar', mid)} — {m.get('name_en', mid)}{_suffix}"
+            options.append((mid, label))
+        return options
+    for mid, disp in MODEL_DISPLAY.items():
+        _ctx = _fmt_ctx(disp.get("served_ctx"))
+        _suffix = f" · {_ctx} ctx" if _ctx else ""
+        label = f"{disp.get('emoji', '🤖')} {disp.get('name_ar', mid)} — {disp.get('name_en', mid)}{_suffix}"
+        options.append((mid, label))
+    return options
+
+
+def get_model_display(model_id: str | None = None) -> dict:
+    """Return the display dict for a model id (defaults to the active session model).
+
+    Falls back to a generic "unknown model" placeholder if the id is not
+    registered — keeps the UI alive for legacy / unknown ids rather than crashing.
+    """
+    if model_id is None:
+        model_id = get_session("model", PHASE_58_DEFAULT_MODEL)
+    return MODEL_DISPLAY.get(
+        model_id,
+        {
+            "name_ar": model_id or "Unknown",
+            "name_en": model_id or "Unknown",
+            "emoji": "🤖",
+            "capabilities": ["text"],
+            "size_b": 0,
+            "quant": "?",
+        },
+    )
+
+
+# ============================================================================
 # API Client
 # ============================================================================
 
@@ -399,8 +718,9 @@ class APIClient:
     def chat(self, messages: list[dict[str, str]], **kwargs) -> dict[str, Any] | None:
         """Non-streaming chat completion."""
         try:
-            # FIX 2026-10-06: use v8 by default — original `alpha-wolf-agent` is BROKEN
-            payload = {"model": "alpha-wolf-agent-v8", "messages": messages}
+            # POLICY 2026-10-12 (القائد): سبارك هو الأساسي
+            model_name = get_session("model", PHASE_58_DEFAULT_MODEL)
+            payload = {"model": model_name, "messages": messages}
             payload.update(kwargs)
             resp = self._session.post(
                 f"{self.base_url}/v1/chat/completions", json=payload, timeout=300
@@ -427,12 +747,19 @@ class APIClient:
             {"type": "done"}
             {"type": "error", "message": "..."}
         """
+        # POLICY 2026-10-12 (القائد): سبارك هو الأساسي
+        model_name = get_session("model", PHASE_58_DEFAULT_MODEL)
+        # TRUTH 2026-10-14: v10 ميت ويُعاد كتابته سبارك في الوكيل — فجلسة قديمة
+        # تحمل v10 يجب أن تأخذ ميزانية سبارك (4000) لا سقف v10 (1500)، وإلا
+        # أكل التفكير الميزانية وخرج الرد فارغاً ("empty response from backend").
+        # لا يوجد أي v10 يُخدم اليوم، فلا حالة تستحق 1500.
+        _max_tokens = 4000  # PHASE 14: Ollama reasoning budget (spark ~4 tok/s)
         payload = {
-            "model": "alpha-wolf-agent-v8",  # FIX 2026-10-06: original model broken
+            "model": model_name,  # FIX 2026-10-06: original model broken
             "messages": messages,
             "stream": True,
             "auto_tools": auto_tools,
-            "max_tokens": 4000,  # PHASE 14: Increased to give Ollama's reasoning phase enough budget before content phase (was 2000, reasoning consumed all tokens leaving 0 for content)
+            "max_tokens": _max_tokens,
         }
         if conversation_id:
             payload["conversation_id"] = conversation_id
@@ -576,6 +903,22 @@ class APIClient:
     def system_status(self) -> dict[str, Any] | None:
         res = self.execute_tool("system_status", {})
         return (res or {}).get("output") if res else None
+
+    # ----- Models (القائد 2026-10-12: قائمة منسدلة لاختيار نموذج الذكاء) -----
+    def list_models(self) -> list[dict[str, Any]]:
+        """List available inference models from backend (/v1/models).
+
+        إدراج نماذج الاستدلال المتاحة من الخادم.
+        Falls back to [] on error — callers use MODEL_DISPLAY fallback.
+        """
+        try:
+            resp = self._session.get(f"{self.base_url}/v1/models", timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            return data if isinstance(data, list) else []
+        except requests.RequestException as exc:
+            logger.warning("list_models failed: %s", exc)
+            return []
 
     # ----- Admin shutdown (Phase 35 — Stop Everything button) -----
     def admin_stop_all(self, timeout: float = 4.0) -> dict[str, Any] | None:
@@ -1678,3 +2021,15 @@ def get_backend_status() -> tuple[bool, str]:
     if client.health_check():
         return True, T["backend_connected"]
     return False, T["backend_offline"]
+
+
+def _safe_api_call(callable_obj, default=None):
+    """Safely execute an API callable, returning its result or default on error.
+
+    Wraps any callable (function, method, lambda) in a try/except so the UI
+    never crashes if the backend returns an error or is unavailable.
+    """
+    try:
+        return callable_obj()
+    except Exception:
+        return default

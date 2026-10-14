@@ -1120,6 +1120,51 @@ _IMAGE_PATH_RE = re.compile(
     r"|[\w\-.\\/]*\.(?:png|jpg|jpeg|webp|gif|bmp))",
     re.IGNORECASE,
 )
+# IMAGE GENERATION intent (2026-10-14): creation verbs — never confuse with
+# reading (see_image). Photo requests MUST reach qwen_image_skill; the model
+# otherwise hand-draws fakes with PIL (proven live: blue arrow "cat").
+_CREATE_IMAGE_RE = re.compile(
+    r"(أنشئ|انشئ|إنشئ|انشاء|إنشاء|ارسم|ولّد|تخيل|اخلق|اصنع"
+    r"|generate|create|draw|paint|imagine|make.{0,20}image|render)",
+    re.IGNORECASE | re.DOTALL,
+)
+_CREATE_IMAGE_NOUNS_RE = re.compile(
+    r"(صورة|صوره|لقطة|لقطه|photo|picture|image|قط|قطة|قطه|كلب|عائلة|عائله"
+    r"|رجل|امرأة|طفل|بيت|سيارة|منظر|cat|dog|family|man|woman|child|house"
+    r"|car|landscape|bird|flower|لاعب|ملعب)",
+    re.IGNORECASE,
+)
+_CREATE_DIR_RE = re.compile(
+    r"(?:file:///)?([A-Za-z]:[\\/][\w\-. \\/]+)",
+    re.IGNORECASE,
+)
+_CREATE_ASPECT_RE = re.compile(r"(21\s*:\s*9|16\s*:\s*9|9\s*:\s*16|1\s*:\s*1|4\s*:\s*3|3\s*:\s*4)")
+
+
+def detect_create_image(user_text: str) -> Optional[Tuple[str, Dict[str, Any]]]:
+    """Detect photo-creation requests → force qwen_image_skill via run_skill.
+
+    كشف طلبات إنشاء الصور — توجيه جبري لمهارة التوليد.
+    Creation verb AND (image word OR drawable noun). Pure, no I/O.
+    Returns (run_skill, {skill_name, arguments}) or None.
+    """
+    text = user_text or ""
+    if not _CREATE_IMAGE_RE.search(text):
+        return None
+    if not _CREATE_IMAGE_NOUNS_RE.search(text):
+        return None
+    idea = " ".join(text.split())
+    aspect = "1:1"
+    am = _CREATE_ASPECT_RE.search(text)
+    if am:
+        aspect = re.sub(r"\s+", "", am.group(1))
+        if aspect not in ("1:1", "16:9", "9:16", "21:9", "4:3", "3:4"):
+            aspect = "1:1"
+    args: Dict[str, Any] = {"idea": idea, "aspect": aspect, "mode": "generate"}
+    dm = _CREATE_DIR_RE.search(text)
+    if dm:
+        args["output_dir"] = dm.group(1).strip().rstrip(" .,;!\"'")
+    return ("run_skill", {"skill_name": "qwen_image_skill", "arguments": args})
 
 
 def detect_see_image(user_text: str) -> Optional[Tuple[str, Dict[str, Any]]]:
@@ -1286,6 +1331,11 @@ def decide_forced_calls(user_text: str) -> List[Tuple[str, Dict[str, Any]]]:
     _calc_op = detect_calc_intent(q)
     if _calc_op:
         return [_calc_op]
+    # IMAGE-GEN 2026-10-14: creation beats file-op/sight — a photo request
+    # with a path must render, not read or mkdir. Placed before file-url.
+    _mkimg_op = detect_create_image(q)
+    if _mkimg_op:
+        return [_mkimg_op]
     if detect_file_url(q):
         return [("read_file", {"path": normalize_file_url(q)})]
     _file_op = detect_file_op(q)
@@ -1528,6 +1578,8 @@ Done."""
         ("شغل المهارة m1 بالوسائط a تساوي 2", "run_skill"),
         ("أنشئ مشروع باسم app1 فيه ملف", "track_goal"),  # build → starter list
         ("خطط لمهمة طويلة من 3 مراحل", "track_goal"),  # plan → goal shell
+        ("انشئ لى صوره لقط صغير يلعب", "run_skill"),  # image-gen → qwen skill
+        ("ارسم قطة على الشاطئ 16:9", "run_skill"),  # image-gen + aspect
         ("حدثني عن الطقس اليوم", None),  # no explicit intent → no forcing
     ]
     for qi, expected in _chain_cases:
