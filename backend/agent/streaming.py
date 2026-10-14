@@ -1948,7 +1948,7 @@ HARD TOOL RULES (must obey):
 
    - The user wants EXECUTED PROOF, not code descriptions. ALWAYS call write_file for EVERY file, then run it.
 
-10. SELF-IMPROVEMENT: install skills you need with install_skill (your own code) or install_skill_from_url (skills.sh/GitHub/trusted https — foreign SKILL.md packs are auto-adapted to your identity); run them with run_skill. Diagnose yourself with system_status (device resources) and repair_body (auto-fix gaps); check system_status BEFORE heavy work to protect the machine.
+10. SELF-IMPROVEMENT: skills listed in your capability map are ALREADY installed — run them directly with run_skill, NEVER install them again. Install ONLY a skill missing from your list: install_skill (your own code) or install_skill_from_url (skills.sh/GitHub/trusted https — foreign SKILL.md packs are auto-adapted to your identity); then run them with run_skill. Diagnose yourself with system_status (device resources) and repair_body (auto-fix gaps); check system_status BEFORE heavy work to protect the machine.
 
 11. NEW SKILLS: when asked for a skill you lack, FIRST check https://www.skills.sh/ (search it with web_search, install via install_skill_from_url) — adapt, don't reinvent. For browser control you carry the playwright-cli playbook skill: drive it via run_shell (snapshot refs are text — made for you).
 
@@ -1990,7 +1990,7 @@ HARD TOOL RULES (must obey):
 
    a. WHEN any tool FAILS or RETURNS error: CALL repair_body with the error details, then RETRY the tool.
 
-   b. WHEN missing a needed skill: CALL install_skill (your own code) or install_skill_from_url (trusted packs from skills.sh), ADAPT don't reinvent.
+   b. WHEN missing a needed skill (NOT in your capability map — listed skills run directly, never reinstall): CALL install_skill (your own code) or install_skill_from_url (trusted packs from skills.sh), ADAPT don't reinvent.
 
    c. DIAGNOSE yourself with system_status after each repair cycle, and ONLY resume when system_status OK.
 

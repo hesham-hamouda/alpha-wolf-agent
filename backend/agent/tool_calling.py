@@ -1129,9 +1129,13 @@ _CREATE_IMAGE_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _CREATE_IMAGE_NOUNS_RE = re.compile(
-    r"(صورة|صوره|لقطة|لقطه|photo|picture|image|قط|قطة|قطه|كلب|عائلة|عائله"
+    r"(صورة|صوره|صور|لقطة|لقطه|photo|picture|image|قط|قطة|قطه|كلب|عائلة|عائله"
     r"|رجل|امرأة|طفل|بيت|سيارة|منظر|cat|dog|family|man|woman|child|house"
-    r"|car|landscape|bird|flower|لاعب|ملعب)",
+    r"|car|landscape|bird|flower|لاعب|ملعب"
+    # sea-life + common animals 2026-10-14 (dolphin request never forced —
+    # neither صور nor دلفين matched, so no render ever started):
+    r"|دلفين|دلافين|دولفين|سمك|قرش|حوت|dolphin|fish|shark|whale"
+    r"|حصان|خيل|horse|أسد|lion)",
     re.IGNORECASE,
 )
 _CREATE_DIR_RE = re.compile(
@@ -1580,6 +1584,8 @@ Done."""
         ("خطط لمهمة طويلة من 3 مراحل", "track_goal"),  # plan → goal shell
         ("انشئ لى صوره لقط صغير يلعب", "run_skill"),  # image-gen → qwen skill
         ("ارسم قطة على الشاطئ 16:9", "run_skill"),  # image-gen + aspect
+        ("ارسم دلفين تحت الماء", "run_skill"),  # sea-life noun, no صورة word
+        ("انشئ صور دلافين تطارد السمك تحت الماء مثل الحقيقه", "run_skill"),
         ("حدثني عن الطقس اليوم", None),  # no explicit intent → no forcing
     ]
     for qi, expected in _chain_cases:

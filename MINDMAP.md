@@ -1,7 +1,7 @@
 # 🧠 Alpha Wolf Agent — Project Mind Map
 
 > خريطة ذهنية شاملة للمشروع — أين هو الآن، كيف وصلنا، إلى أين يتجه.
-> آخر تحديث: 2026-10-13 (عصر الموجه التلقائي — 58 نموذجاً بالقائمة).
+> آخر تحديث: 2026-10-14 (الصور الاحترافية + صياغة المطالب + إشراف برنامج الرسم).
 
 ## 🎯 Project Mission
 
@@ -27,7 +27,7 @@
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    BACKEND (FastAPI :8001)                    │
-│  - 29 tools + 39 skills (مهارة حقيقية لكل قسم، 16 جديدة)      │
+│  - 29 tools + 40 skills (مهارة حقيقية لكل قسم + صياغة المطالب) │
 │  - قائمة 58 نموذجاً: 6 أولاما مباشرة + 52 تخصصياً بمهاراتهم   │
 │  - بديل شات تلقائي (7 مواقع + البث) + رؤية تلقائية + تقطير    │
 │  - الجسر: backend/agent/model_router_bridge.py                │
@@ -74,12 +74,12 @@ E:\Projects and systems managed by the team of experts\Alpha Wolf Agent\
 │   │   ├── memory_layers.py      # 4-layer unified recall (NEW R26)
 │   │   ├── code_exec.py          # Python execution + safety check
 │   │   ├── web_search.py         # Google News + Bing + Wiki chain
-│   │   ├── skills_manager.py     # Skill registry (39 مهارة حية)
+│   │   │   ├── skills_manager.py     # Skill registry (40 مهارة حية)
 │   │   ├── skill_forge.py        # Skill installation
 │   │   ├── model_router_bridge.py # جسر التوجيه: بديل+أقسام+تقطير (2026-10-13)
 │   │   ├── hf_runner.py          # عداء متخصصي HF المشترك (2026-10-13)
 │   │   └── capabilities.py       # Live capability map
-│   └── skills/                   # Skill implementations (39: 16 للأقسام 2026-10-13)
+│   └── skills/                   # Skill implementations (40: +prompt_forge 2026-10-14)
 │
 ├── frontend/                     # Streamlit UI
 │   ├── streamlit_preview.py      # Main UI (7 pages + P3 sections)
@@ -140,11 +140,14 @@ E:\Projects and systems managed by the team of experts\Alpha Wolf Agent\
 - **Base (2026-10-12):** سلسلة Ollama محلية — سبارك الأساسي (لا تدريب يُخدم)
 - **Adapter:** لا يُخدم حالياً (أوزان LoRA على القرص فقط — TRAINING SUSPENDED)
 
-### Models & Skills (2026-10-13)
+### Models & Skills (2026-10-14)
 - **قائمة الدردشة:** 58 نموذجاً (6 أولاما مباشرة + 52 تخصصياً بمهاراتهم) + وضع تلقائي
-- **الأقسام:** 21 قسماً / 63 نموذجاً — مهارة حقيقية لكل قسم (39 مهارة مسجلة)
+- **الأقسام:** 21 قسماً / 63 نموذجاً — مهارة حقيقية لكل قسم (40 مهارة مسجلة)
 - **مثبت حياً:** توربو صور (منارة PNG)، حلقة صوتية (تفريغ مطابق)، بروتين (1.0)، رياضيات (396)
 - **معلق بصدق:** عدّاء شاندرا (حارس 240s) + 9 بطاقات انتظار
+- **صياغة المطالب (جديد):** `prompt_forge_skill` تحوّل طلب القائد الضعيف/العامي لأمر احترافي مع التوجيه للقدرة الصح (صورة/بحث/بناء/ملف/كود/وقت) — بلا أسئلة، بلا GPU
+- **صور احترافية (مطوّر):** `qwen_image_skill` تبني مشهداً سينمائياً حسب النوع (شاطئ/عائلة/حيوان/حركة/تحت-الماء) + فلتر جودة سلبي + حفظ دائم بنسخة محلية + تشغيل برنامج الرسم تلقائياً لو مطفي (ADR-0003)
+- **مثبت بالصور:** عائلة على الخيل براس البر (`00004`) · دلافين تطارد السمك (`00005`) — بمجلد الصور
 
 ### Training Data
 - **الحالة:** مجمّدة (TRAINING SUSPENDED 2026-10-12) — الدولاب يصدّر ويُنقّي فقط
@@ -160,6 +163,11 @@ E:\Projects and systems managed by the team of experts\Alpha Wolf Agent\
 ### عصر الموجه التلقائي (مكتمل 2026-10-13)
 - **المنجز:** 58 بالقائمة + 21 قسماً + 39 مهارة + بديل/رؤية/تقطير تلقائي + ComfyUI حي
 - **Status:** يعمل — مثبت حياً (منارة، صوت مطابق، بروتين 1.0، رياضيات 396)
+
+### الصور الاحترافية وصياغة المطالب (مكتمل 2026-10-14)
+- **المنجز:** `prompt_forge_skill` (40) + تطوير `qwen_image_skill` (مشهد احترافي/فلتر/حفظ/تشغيل تلقائي) + إصلاح كاشف الصور (صور + كائنات بحرية — 29/29) + قاعدة "ثبّت الناقص بس" بالتعليمات
+- **Status:** يعمل — مثبت حياً (دلافين `00005` + قطة اختبار التشغيل التلقائي `00006`)
+- **معروف بصدق:** الموديل يخترع أحياناً رقم إثبات (-39) بدل عرض مسار الملف — مسجل كملاحظة حرجة، والحفظ الدائم يضمن وجود المسار دائماً
 
 ### المعلق بصدق
 - **عدّاء شاندرا:** تحميل الأوزان يعلق بصمت (4 محاولات) — حارس 240s يمنع تعليق الدور
@@ -184,7 +192,10 @@ E:\Projects and systems managed by the team of experts\Alpha Wolf Agent\
 | Engine tests (router+sections) | 52/52 PASS | 2026-10-13 |
 | Skill self-tests | 14/14 PASS | 2026-10-13 |
 | Chat-list models | 58 (6+52) | 2026-10-13 |
-| Registered skills | 39 (16 للأقسام) | 2026-10-13 |
+| Registered skills | 40 (16 للأقسام + صياغة المطالب) | 2026-10-14 |
+| Image prompt tests | 16/16 GREEN + self-test | 2026-10-14 |
+| Image router tests | 29/29 GREEN | 2026-10-14 |
+| Prompt-forge tests | 4/4 GREEN + live API proof | 2026-10-14 |
 | RAG index | 4905 chunks / 14 collections | 2026-10-13 |
 | Frontend WCAG | 2.1 AA | 2026-10-06 |
 | Active tools | 29 | 2026-10-06 |
@@ -203,4 +214,4 @@ E:\Projects and systems managed by the team of experts\Alpha Wolf Agent\
 
 - **Repo:** Initialized on `master` branch
 - **Remote:** `https://github.com/hesham-hamouda/alpha-wolf-agent.git`
-- **Note:** شجرة العمل تحمل تعديلات متراكمة (قديمة + توصيل الموجه) — تُراجع قبل أي commit
+- **Phase 72 (2026-10-14):** كوميت واحد لملفات هذه الجولة فقط (مهارة الصور + صياغة المطالب + الموجه + التعليمات + فحوصها + توثيقها) — باقي التعديلات المتراكمة بالشجرة تُراجع وحدها لاحقاً

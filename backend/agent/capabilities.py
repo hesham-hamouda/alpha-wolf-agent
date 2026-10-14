@@ -91,10 +91,13 @@ def build_capability_map() -> str:
         "- ⛔ FORBIDDEN: drawing photos with PIL/matplotlib/code — photo requests MUST use run_skill(qwen_image_skill). Hand-drawn fakes are a FAILURE.",
         "- CREATE/EDIT image → run_skill(qwen_image_skill, {idea (English ok, Arabic ok — skill engineers it), aspect (1:1|16:9|9:16|21:9), mode (generate|edit), input_image?, output_dir?}) — returns PNG path. "
         "If the user names a folder, pass it as output_dir. After the tool returns, tell the user the file path. "
-        "Never claim inability; never download stock photos instead.",
+        "Never claim inability; never download stock photos instead. "
+        "qwen_image_skill is ALREADY installed — NEVER install it, just run it.",
         "- Multimodal search → embed_multimodal (EmbeddingGemma 2) → query across 13 ChromaDB collections → returns matching text/images/audio.",
         "- Build app → write_file EVERY file under TESTS → RUN via run_shell → show real output.",
         "- Long task → track_goal → update_goal → list_goals (persists across sessions).",
+        "- Listed skills need NO install — run_skill them directly. Install ONLY a skill missing from your list.",
+        "- Weak/vague/dialectal request → run_skill(prompt_forge_skill, {request}) FIRST: it forges the professional prompt AND names the exact skill/tool to execute — then run that route. Never ask the user to 'write a better prompt'.",
         "- New skill needed → check https://www.skills.sh/ → install_skill_from_url (auto-adapted).",
         "- Feeling lost → repair_body (auto-fix) + /v1/self/gaps (weakness list).",
         "- Heavy work first → system_status (protect the machine).",
